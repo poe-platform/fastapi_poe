@@ -34,3 +34,23 @@ jobs:
           python -m pip install .
 
       - uses: jakebailey/pyright-action@v1
+
+  tests:
+    name: pytest suite
+    timeout-minutes: 10
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          allow-prereleases: true
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: pip install -e .[dev]
+      - run: python3 -c 'import fastapi_poe'
