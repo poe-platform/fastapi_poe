@@ -36,7 +36,7 @@ jobs:
       - uses: jakebailey/pyright-action@v1
 
   tests:
-    name: pytest suite
+    name: basic import test
     timeout-minutes: 10
     runs-on: ${{ matrix.os }}
     strategy:
