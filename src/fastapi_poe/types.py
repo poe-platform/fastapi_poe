@@ -41,6 +41,10 @@ class QueryRequest(BaseRequest):
     conversation_id: Identifier
     message_id: Identifier
     api_key: str = "<missing>"
+    temperature: float = 0.7
+    skip_system_prompt: bool = False
+    logit_bias: Dict[str, float] = {}
+    stop_sequences: List[str] = []
 
 
 class SettingsRequest(BaseRequest):
