@@ -15,6 +15,12 @@ class MessageFeedback(BaseModel):
     reason: Optional[str]
 
 
+class Attachment(BaseModel):
+    url: str
+    content_type: str
+    name: str
+
+
 class ProtocolMessage(BaseModel):
     """A message as used in the Poe protocol."""
 
@@ -24,6 +30,7 @@ class ProtocolMessage(BaseModel):
     timestamp: int = 0
     message_id: str = ""
     feedback: List[MessageFeedback] = Field(default_factory=list)
+    attachments: List[Attachment] = Field(default_factory=list)
 
 
 class BaseRequest(BaseModel):
@@ -40,6 +47,7 @@ class QueryRequest(BaseRequest):
     user_id: Identifier
     conversation_id: Identifier
     message_id: Identifier
+    metadata: Identifier = ""
     api_key: str = "<missing>"
     temperature: float = 0.7
     skip_system_prompt: bool = False
@@ -70,3 +78,5 @@ class ReportErrorRequest(BaseRequest):
 class SettingsResponse(BaseModel):
     context_clear_window_secs: Optional[int] = None
     allow_user_context_clear: bool = True
+    server_bot_dependencies: Dict[str, int] = Field(default_factory=dict)
+    allow_attachments: bool = False
