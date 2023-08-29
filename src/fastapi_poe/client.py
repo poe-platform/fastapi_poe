@@ -1,6 +1,6 @@
 """
 
-Client for talking to other Poe bots through the Poe API.
+Client for talking to other Poe bots through the Poe third party bot API.
 
 """
 import asyncio
@@ -15,7 +15,7 @@ import httpx_sse
 
 from .types import ContentType, Identifier, QueryRequest, SettingsResponse
 
-API_VERSION = "1.0"
+PROTOCOL_VERSION = "1.0"
 MESSAGE_LENGTH_LIMIT = 10_000
 
 IDENTIFIER_LENGTH = 32
@@ -96,7 +96,7 @@ class _BotContext:
             self.endpoint,
             headers=self.headers,
             json={
-                "version": API_VERSION,
+                "version": PROTOCOL_VERSION,
                 "type": "report_error",
                 "message": message,
                 "metadata": metadata or {},
@@ -115,7 +115,7 @@ class _BotContext:
             self.endpoint,
             headers=self.headers,
             json={
-                "version": API_VERSION,
+                "version": PROTOCOL_VERSION,
                 "type": "report_feedback",
                 "message_id": message_id,
                 "user_id": user_id,
@@ -129,7 +129,7 @@ class _BotContext:
         resp = await self.session.post(
             self.endpoint,
             headers=self.headers,
-            json={"version": API_VERSION, "type": "settings"},
+            json={"version": PROTOCOL_VERSION, "type": "settings"},
         )
         return resp.json()
 
