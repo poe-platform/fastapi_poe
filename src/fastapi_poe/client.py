@@ -304,8 +304,9 @@ async def stream_request(
     request: QueryRequest,
     bot_name: str,
     access_key: str = "",
-    api_key: str = "",
     *,
+    api_key: str = "",
+    api_key_deprecation_warning_stacklevel: int = 2,
     session: Optional[httpx.AsyncClient] = None,
     on_error: ErrorHandler = _default_error_handler,
     num_tries: int = 2,
@@ -317,7 +318,7 @@ async def stream_request(
         warnings.warn(
             "the api_key param is deprecated, pass your key using access_key instead",
             DeprecationWarning,
-            stacklevel=4,
+            stacklevel=api_key_deprecation_warning_stacklevel,
         )
         if access_key == "":
             access_key = api_key
@@ -346,11 +347,17 @@ async def stream_request(
 
 
 async def get_final_response(
-    request: QueryRequest, bot_name: str, access_key: str = "", api_key: str = ""
+    request: QueryRequest, bot_name: str, access_key: str = "", *, api_key: str = ""
 ) -> str:
     """Gets the final response from a Poe bot."""
     chunks: List[str] = []
-    async for message in stream_request(request, bot_name, access_key, api_key):
+    async for message in stream_request(
+        request,
+        bot_name,
+        access_key,
+        api_key=api_key,
+        api_key_deprecation_warning_stacklevel=3,
+    ):
         if isinstance(message, MetaMessage):
             continue
         if message.is_suggested_reply:

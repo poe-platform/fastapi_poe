@@ -175,10 +175,8 @@ class PoeBot:
         yield self.done_event()
 
 
-def find_auth_key(
-    *, access_key: str, api_key: str, allow_without_key: bool = False
-) -> Optional[str]:
-    """Figures out the auth key.
+def _find_access_key(*, access_key: str, api_key: str) -> Optional[str]:
+    """Figures out the access key.
 
     The order of preference is:
     1) access_key=
@@ -187,27 +185,38 @@ def find_auth_key(
     4) $POE_API_KEY
 
     """
+    if access_key:
+        return access_key
+
     environ_poe_access_key = os.environ.get("POE_ACCESS_KEY")
-    if environ_poe_access_key and access_key == "":
-        access_key = environ_poe_access_key
-    if api_key != "":
+    if environ_poe_access_key:
+        return environ_poe_access_key
+
+    if api_key:
         warnings.warn(
             "usage of api_key is deprecated, pass your key using access_key instead",
             DeprecationWarning,
-            stacklevel=4,
+            stacklevel=3,
         )
-        if access_key == "":
-            access_key = api_key
+        return api_key
+
     environ_poe_api_key = os.environ.get("POE_API_KEY")
     if environ_poe_api_key:
         warnings.warn(
             "usage of POE_API_KEY is deprecated, pass your key using POE_ACCESS_KEY instead",
             DeprecationWarning,
-            stacklevel=4,
+            stacklevel=3,
         )
-        if access_key == "":
-            access_key = environ_poe_api_key
+        return environ_poe_api_key
 
+    return None
+
+
+def _verify_access_key(
+    *, access_key: str, api_key: str, allow_without_key: bool = False
+) -> Optional[str]:
+    """Checks whether we have a valid auth key and returns it."""
+    access_key = _find_access_key(access_key=access_key, api_key=api_key)
     if not access_key:
         if allow_without_key:
             return None
@@ -221,7 +230,7 @@ def find_auth_key(
         )
         sys.exit(1)
     if len(access_key) != 32:
-        print("Invalid API key (should be 32 characters)")
+        print("Invalid access key (should be 32 characters)")
         sys.exit(1)
     return access_key
 
@@ -229,8 +238,8 @@ def find_auth_key(
 def make_app(
     bot: PoeBot,
     access_key: str = "",
-    api_key: str = "",
     *,
+    api_key: str = "",
     allow_without_key: bool = False,
 ) -> FastAPI:
     """Create an app object. Arguments are as for run()."""
@@ -238,7 +247,7 @@ def make_app(
     app.add_exception_handler(RequestValidationError, exception_handler)
 
     global auth_key
-    auth_key = find_auth_key(
+    auth_key = _verify_access_key(
         access_key=access_key, api_key=api_key, allow_without_key=allow_without_key
     )
 
@@ -284,8 +293,8 @@ def make_app(
 def run(
     bot: PoeBot,
     access_key: str = "",
-    api_key: str = "",
     *,
+    api_key: str = "",
     allow_without_key: bool = False,
 ) -> None:
     """
@@ -303,7 +312,9 @@ def run(
 
     """
 
-    app = make_app(bot, access_key, api_key, allow_without_key=allow_without_key)
+    app = make_app(
+        bot, access_key=access_key, api_key=api_key, allow_without_key=allow_without_key
+    )
 
     parser = argparse.ArgumentParser("FastAPI sample Poe bot server")
     parser.add_argument("-p", "--port", type=int, default=8080)
