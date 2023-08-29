@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import sys
+import warnings
 from typing import Any, AsyncIterable, Dict, Optional, Union
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
@@ -73,7 +74,7 @@ def auth_user(
     if authorization.scheme != "Bearer" or authorization.credentials != auth_key:
         raise HTTPException(
             status_code=401,
-            detail="Invalid API key",
+            detail="Invalid access key",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -174,37 +175,72 @@ class PoeBot:
         yield self.done_event()
 
 
-def find_auth_key(api_key: str, *, allow_without_key: bool = False) -> Optional[str]:
-    if not api_key:
-        if os.environ.get("POE_API_KEY"):
-            api_key = os.environ["POE_API_KEY"]
-        else:
-            if allow_without_key:
-                return None
-            print(
-                "Please provide an API key. You can get a key from the create_bot form at:"
-            )
-            print("https://poe.com/create_bot?api=1")
-            print(
-                "You can pass the API key to the run() function or "
-                "use the POE_API_KEY environment variable."
-            )
-            sys.exit(1)
-    if len(api_key) != 32:
+def find_auth_key(
+    *, access_key: str, api_key: str, allow_without_key: bool = False
+) -> Optional[str]:
+    """Figures out the auth key.
+
+    The order of preference is:
+    1) access_key=
+    2) $POE_ACCESS_KEY
+    3) api_key=
+    4) $POE_API_KEY
+
+    """
+    environ_poe_access_key = os.environ.get("POE_ACCESS_KEY")
+    if environ_poe_access_key and access_key == "":
+        access_key = environ_poe_access_key
+    if api_key != "":
+        warnings.warn(
+            "usage of api_key is deprecated, pass your key using access_key instead",
+            DeprecationWarning,
+            stacklevel=4,
+        )
+        if access_key == "":
+            access_key = api_key
+    environ_poe_api_key = os.environ.get("POE_API_KEY")
+    if environ_poe_api_key:
+        warnings.warn(
+            "usage of POE_API_KEY is deprecated, pass your key using POE_ACCESS_KEY instead",
+            DeprecationWarning,
+            stacklevel=4,
+        )
+        if access_key == "":
+            access_key = environ_poe_api_key
+
+    if not access_key:
+        if allow_without_key:
+            return None
+        print(
+            "Please provide an access key. You can get a key from the create_bot form at:"
+        )
+        print("https://poe.com/create_bot?server=1")
+        print(
+            "You can pass the access key to the run() or make_app() functions or "
+            "use the POE_ACCESS_KEY environment variable."
+        )
+        sys.exit(1)
+    if len(access_key) != 32:
         print("Invalid API key (should be 32 characters)")
         sys.exit(1)
-    return api_key
+    return access_key
 
 
 def make_app(
-    bot: PoeBot, api_key: str = "", *, allow_without_key: bool = False
+    bot: PoeBot,
+    access_key: str = "",
+    api_key: str = "",
+    *,
+    allow_without_key: bool = False,
 ) -> FastAPI:
     """Create an app object. Arguments are as for run()."""
     app = FastAPI()
     app.add_exception_handler(RequestValidationError, exception_handler)
 
     global auth_key
-    auth_key = find_auth_key(api_key, allow_without_key=allow_without_key)
+    auth_key = find_auth_key(
+        access_key=access_key, api_key=api_key, allow_without_key=allow_without_key
+    )
 
     @app.get("/")
     async def index() -> Response:
@@ -221,7 +257,11 @@ def make_app(
             return EventSourceResponse(
                 bot.handle_query(
                     QueryRequest.parse_obj(
-                        {**request, "api_key": auth_key or "<missing>"}
+                        {
+                            **request,
+                            "access_key": auth_key or "<missing>",
+                            "api_key": auth_key or "<missing>",
+                        }
                     )
                 )
             )
@@ -241,21 +281,29 @@ def make_app(
     return app
 
 
-def run(bot: PoeBot, api_key: str = "", *, allow_without_key: bool = False) -> None:
+def run(
+    bot: PoeBot,
+    access_key: str = "",
+    api_key: str = "",
+    *,
+    allow_without_key: bool = False,
+) -> None:
     """
     Run a Poe bot server using FastAPI.
 
     :param bot: The bot object.
-    :param api_key: The Poe API key to use. If not provided, it will try to read
-    the POE_API_KEY environment variable. If that is not set, the server will
+    :param access_key: The access key to use. If not provided, the server tries to read
+    the POE_ACCESS_KEY environment variable. If that is not set, the server will
     refuse to start, unless *allow_without_key* is True.
-    :param allow_without_key: If True, the server will start even if no API key
-    is provided. Requests will not be checked against any key. If an API key
+    :param api_key: The previous name of access_key. This param is deprecated and will be
+    removed in a future version
+    :param allow_without_key: If True, the server will start even if no access key
+    is provided. Requests will not be checked against any key. If an access key
     is provided, it is still checked.
 
     """
 
-    app = make_app(bot, api_key, allow_without_key=allow_without_key)
+    app = make_app(bot, access_key, api_key, allow_without_key=allow_without_key)
 
     parser = argparse.ArgumentParser("FastAPI sample Poe bot server")
     parser.add_argument("-p", "--port", type=int, default=8080)
@@ -270,7 +318,3 @@ def run(bot: PoeBot, api_key: str = "", *, allow_without_key: bool = False) -> N
         "fmt"
     ] = "%(asctime)s - %(levelname)s - %(message)s"
     uvicorn.run(app, host="0.0.0.0", port=port, log_config=log_config)
-
-
-if __name__ == "__main__":
-    run(PoeBot())

@@ -49,6 +49,7 @@ class QueryRequest(BaseRequest):
     message_id: Identifier
     metadata: Identifier = ""
     api_key: str = "<missing>"
+    access_key: str = "<missing>"
     temperature: float = 0.7
     skip_system_prompt: bool = False
     logit_bias: Dict[str, float] = {}

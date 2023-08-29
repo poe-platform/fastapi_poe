@@ -2,6 +2,8 @@
 
 Sample bot that echoes back messages.
 
+See more samples in the tutorial repo at: https://github.com/poe-platform/server-bot-tutorial
+
 """
 from __future__ import annotations
 
@@ -20,4 +22,4 @@ class EchoBot(PoeBot):
 
 
 if __name__ == "__main__":
-    run(EchoBot())
+    run(EchoBot(), allow_without_key=True)

@@ -30,12 +30,12 @@ if __name__ == "__main__":
 ## Enable authentication
 
 Poe servers send requests containing Authorization HTTP header in the format "Bearer
-<api_key>," where api_key is the API key configured in the bot settings. \
+<access_key>"; the access key is configured in the bot settings page.
 
-To validate the requests are from Poe Servers, you can either set the environment
-variable POE_API_KEY or pass the parameter api_key in the run function like:
+To validate that the request is from the Poe servers, you can either set the environment
+variable POE_ACCESS_KEY or pass the parameter access_key in the run function like:
 
 ```python
 if __name__ == "__main__":
-    run(EchoBot(), api_key=<key>)
+    run(EchoBot(), access_key=<key>)
 ```
