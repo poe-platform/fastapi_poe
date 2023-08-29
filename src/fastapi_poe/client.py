@@ -1,11 +1,12 @@
 """
 
-Client for talking to other Poe bots through Poe's bot API.
+Client for talking to other Poe bots through the Poe API.
 
 """
 import asyncio
 import contextlib
 import json
+import warnings
 from dataclasses import dataclass, field
 from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, cast
 
@@ -52,7 +53,7 @@ class BotMessage:
 
 @dataclass
 class MetaMessage(BotMessage):
-    """Communicate 'meta' events from API bots."""
+    """Communicate 'meta' events from server bots."""
 
     linkify: bool = True
     suggested_replies: bool = True
@@ -70,13 +71,16 @@ def _safe_ellipsis(obj: object, limit: int) -> str:
 @dataclass
 class _BotContext:
     endpoint: str
-    api_key: str = field(repr=False)
+    access_key: str = field(repr=False)
     session: httpx.AsyncClient = field(repr=False)
     on_error: Optional[ErrorHandler] = field(default=None, repr=False)
 
     @property
     def headers(self) -> Dict[str, str]:
-        return {"Accept": "application/json", "Authorization": f"Bearer {self.api_key}"}
+        return {
+            "Accept": "application/json",
+            "Authorization": f"Bearer {self.access_key}",
+        }
 
     async def report_error(
         self, message: str, metadata: Optional[Dict[str, Any]] = None
@@ -121,7 +125,7 @@ class _BotContext:
         )
 
     async def fetch_settings(self) -> SettingsResponse:
-        """Fetches settings from a Poe API Bot Endpoint."""
+        """Fetches settings from a Poe server bot endpoint."""
         resp = await self.session.post(
             self.endpoint,
             headers=self.headers,
@@ -293,27 +297,38 @@ class _BotContext:
 
 
 def _default_error_handler(e: Exception, msg: str) -> None:
-    print("Error in Poe API Bot:", msg, e)
+    print("Error in Poe bot:", msg, e)
 
 
 async def stream_request(
     request: QueryRequest,
     bot_name: str,
-    api_key: str,
+    access_key: str = "",
     *,
+    api_key: str = "",
+    api_key_deprecation_warning_stacklevel: int = 2,
     session: Optional[httpx.AsyncClient] = None,
     on_error: ErrorHandler = _default_error_handler,
     num_tries: int = 2,
     retry_sleep_time: float = 0.5,
     base_url: str = "https://api.poe.com/bot/",
 ) -> AsyncGenerator[BotMessage, None]:
-    """Streams BotMessages from an API bot."""
+    """Streams BotMessages from a Poe bot."""
+    if api_key != "":
+        warnings.warn(
+            "the api_key param is deprecated, pass your key using access_key instead",
+            DeprecationWarning,
+            stacklevel=api_key_deprecation_warning_stacklevel,
+        )
+        if access_key == "":
+            access_key = api_key
+
     async with contextlib.AsyncExitStack() as stack:
         if session is None:
             session = await stack.enter_async_context(httpx.AsyncClient())
         url = f"{base_url}{bot_name}"
         ctx = _BotContext(
-            endpoint=url, api_key=api_key, session=session, on_error=on_error
+            endpoint=url, access_key=access_key, session=session, on_error=on_error
         )
         got_response = False
         for i in range(num_tries):
@@ -331,10 +346,18 @@ async def stream_request(
                 await asyncio.sleep(retry_sleep_time)
 
 
-async def get_final_response(request: QueryRequest, bot_name: str, api_key: str) -> str:
-    """Gets the final response from an API bot."""
+async def get_final_response(
+    request: QueryRequest, bot_name: str, access_key: str = "", *, api_key: str = ""
+) -> str:
+    """Gets the final response from a Poe bot."""
     chunks: List[str] = []
-    async for message in stream_request(request, bot_name, api_key):
+    async for message in stream_request(
+        request,
+        bot_name,
+        access_key,
+        api_key=api_key,
+        api_key_deprecation_warning_stacklevel=3,
+    ):
         if isinstance(message, MetaMessage):
             continue
         if message.is_suggested_reply:
