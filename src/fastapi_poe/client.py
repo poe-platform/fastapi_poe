@@ -1,6 +1,7 @@
 """
 
 Client for talking to other Poe bots through the Poe third party bot API.
+For more details, see: https://developer.poe.com/server-bots/api-to-access-bots-on-poe
 
 """
 import asyncio
