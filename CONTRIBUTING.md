@@ -15,7 +15,7 @@ To release a new version of `fastapi_poe`, do the following:
 - Make a PR updating the version number in `pyproject.toml` (example:
   https://github.com/poe-platform/fastapi_poe/pull/2)
 - Merge it once CI passes
-- Go to https://github.com/poe-platform/poe-protocol/releases/new and make a new release
+- Go to https://github.com/poe-platform/fastapi-poe/releases/new and make a new release
   (note this link works only if you have commit access to this repository)
 - The tag should be of the form "0.0.X".
 - Fill in the release notes with some description of what changed since the last
