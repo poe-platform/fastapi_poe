@@ -215,24 +215,22 @@ def _find_access_key(*, access_key: str, api_key: str) -> Optional[str]:
 def _verify_access_key(
     *, access_key: str, api_key: str, allow_without_key: bool = False
 ) -> Optional[str]:
-    """Checks whether we have a valid auth key and returns it."""
-    access_key = _find_access_key(access_key=access_key, api_key=api_key)
-    if not access_key:
+    """Checks whether we have a valid access key and returns it."""
+    _access_key = _find_access_key(access_key=access_key, api_key=api_key)
+    if not _access_key:
         if allow_without_key:
             return None
         print(
-            "Please provide an access key. You can get a key from the create_bot form at:"
-        )
-        print("https://poe.com/create_bot?server=1")
-        print(
-            "You can pass the access key to the run() or make_app() functions or "
-            "use the POE_ACCESS_KEY environment variable."
+            "Please provide an access key.\n"
+            "You can get a key from the create_bot page at: https://poe.com/create_bot?server=1\n"
+            "You can then pass the key using the access_key param to the run() or make_app() "
+            "functions, or by using the POE_ACCESS_KEY environment variable."
         )
         sys.exit(1)
-    if len(access_key) != 32:
+    if len(_access_key) != 32:
         print("Invalid access key (should be 32 characters)")
         sys.exit(1)
-    return access_key
+    return _access_key
 
 
 def make_app(
