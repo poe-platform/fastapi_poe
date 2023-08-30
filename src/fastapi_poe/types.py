@@ -77,7 +77,8 @@ class ReportErrorRequest(BaseRequest):
 
 
 class SettingsResponse(BaseModel):
-    context_clear_window_secs: Optional[int] = None
-    allow_user_context_clear: bool = True
+    context_clear_window_secs: Optional[int] = None  # deprecated
+    allow_user_context_clear: bool = True  # deprecated
     server_bot_dependencies: Dict[str, int] = Field(default_factory=dict)
     allow_attachments: bool = False
+    introduction_message: str = ""
