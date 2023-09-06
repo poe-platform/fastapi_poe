@@ -16,6 +16,9 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from fastapi_poe.types import (
     ContentType,
+    ErrorResponse,
+    MetaResponse,
+    PartialResponse,
     QueryRequest,
     ReportErrorRequest,
     ReportFeedbackRequest,
@@ -82,7 +85,9 @@ def auth_user(
 class PoeBot:
     # Override these for your bot
 
-    async def get_response(self, query: QueryRequest) -> AsyncIterable[ServerSentEvent]:
+    async def get_response(
+        self, query: QueryRequest
+    ) -> AsyncIterable[Union[PartialResponse, ServerSentEvent]]:
         """Override this to return a response to user queries."""
         yield self.text_event("hello")
 
@@ -99,7 +104,6 @@ class PoeBot:
         logger.error(f"Error from Poe server: {error_request}")
 
     # Helpers for generating responses
-
     @staticmethod
     def text_event(text: str) -> ServerSentEvent:
         return ServerSentEvent(data=json.dumps({"text": text}), event="text")
@@ -168,7 +172,25 @@ class PoeBot:
     async def handle_query(self, query: QueryRequest) -> AsyncIterable[ServerSentEvent]:
         try:
             async for event in self.get_response(query):
-                yield event
+                if isinstance(event, ServerSentEvent):
+                    yield event
+                elif isinstance(event, ErrorResponse):
+                    yield self.error_event(event.text, allow_retry=event.allow_retry)
+                    continue
+                elif isinstance(event, MetaResponse):
+                    yield self.meta_event(
+                        content_type=event.content_type,
+                        refetch_settings=event.refetch_settings,
+                        linkify=event.linkify,
+                        suggested_replies=event.suggested_replies,
+                    )
+                    continue
+                elif event.is_suggested_reply:
+                    yield self.suggested_reply_event(event.text)
+                elif event.is_replace_response:
+                    yield self.replace_response_event(event.text)
+                else:
+                    yield self.text_event(event.text)
         except Exception as e:
             logger.exception("Error responding to query")
             yield self.error_event(repr(e), allow_retry=False)

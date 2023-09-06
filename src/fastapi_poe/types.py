@@ -82,3 +82,46 @@ class SettingsResponse(BaseModel):
     server_bot_dependencies: Dict[str, int] = Field(default_factory=dict)
     allow_attachments: bool = False
     introduction_message: str = ""
+
+
+class PartialResponse(BaseModel):
+    """Representation of a (possibly partial) response from a bot."""
+
+    text: str
+    """Partial response text.
+
+    If the final bot response is "ABC", you may see a sequence
+    of PartialResponse objects like PartialResponse(text="A"),
+    PartialResponse(text="B"), PartialResponse(text="C").
+
+    """
+
+    raw_response: object = None
+    """For debugging, the raw response from the bot."""
+
+    full_prompt: Optional[str] = None
+    """For debugging, contains the full prompt as sent to the bot."""
+
+    request_id: Optional[str] = None
+    """May be set to an internal identifier for the request."""
+
+    is_suggested_reply: bool = False
+    """If true, this is a suggested reply."""
+
+    is_replace_response: bool = False
+    """If true, this text should completely replace the previous bot text."""
+
+
+class ErrorResponse(PartialResponse):
+    """Communicate errors from server bots."""
+
+    allow_retry: bool = False
+
+
+class MetaResponse(PartialResponse):
+    """Communicate 'meta' events from server bots."""
+
+    linkify: bool = True
+    suggested_replies: bool = True
+    content_type: ContentType = "text/markdown"
+    refetch_settings: bool = False
