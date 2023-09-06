@@ -176,7 +176,6 @@ class PoeBot:
                     yield event
                 elif isinstance(event, ErrorResponse):
                     yield self.error_event(event.text, allow_retry=event.allow_retry)
-                    continue
                 elif isinstance(event, MetaResponse):
                     yield self.meta_event(
                         content_type=event.content_type,
@@ -184,7 +183,6 @@ class PoeBot:
                         linkify=event.linkify,
                         suggested_replies=event.suggested_replies,
                     )
-                    continue
                 elif event.is_suggested_reply:
                     yield self.suggested_reply_event(event.text)
                 elif event.is_replace_response:
