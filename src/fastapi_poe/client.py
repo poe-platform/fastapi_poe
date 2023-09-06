@@ -14,7 +14,14 @@ from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, cast
 import httpx
 import httpx_sse
 
-from .types import ContentType, Identifier, QueryRequest, SettingsResponse
+from .types import (
+    ContentType,
+    Identifier,
+    MetaResponse as MetaMessage,
+    PartialResponse as BotMessage,
+    QueryRequest,
+    SettingsResponse,
+)
 
 PROTOCOL_VERSION = "1.0"
 MESSAGE_LENGTH_LIMIT = 10_000
@@ -35,30 +42,6 @@ class BotErrorNoRetry(BotError):
 
 class InvalidBotSettings(Exception):
     """Raised when a bot returns invalid settings."""
-
-
-@dataclass
-class BotMessage:
-    """Representation of a (possibly partial) response from a bot."""
-
-    text: str  # text of the message so far
-    raw_response: object
-    full_prompt: Optional[str]
-    request_id: Optional[str] = None
-    is_suggested_reply: bool = False
-
-    # "is_replace_response" - represents if this text
-    # should completely replace the previous bot text.
-    is_replace_response: bool = False
-
-
-@dataclass
-class MetaMessage(BotMessage):
-    """Communicate 'meta' events from server bots."""
-
-    linkify: bool = True
-    suggested_replies: bool = True
-    content_type: ContentType = "text/markdown"
 
 
 def _safe_ellipsis(obj: object, limit: int) -> str:
@@ -216,8 +199,8 @@ class _BotContext:
                         error_reported = True
                         continue
                     yield MetaMessage(
-                        "",
-                        data,
+                        text="",
+                        raw_response=data,
                         full_prompt=repr(request),
                         linkify=linkify,
                         suggested_replies=send_suggested_replies,
