@@ -17,11 +17,12 @@ This package can also be used as a base to write your own bot. You can inherit f
 
 ```python
 from fastapi_poe import PoeBot, run
+from fastapi_poe.types import PartialResponse
 
 class EchoBot(PoeBot):
     async def get_response(self, query):
         last_message = query.query[-1].content
-        yield self.text_event(last_message)
+        yield PartialResponse(text=last_message)
 
 if __name__ == "__main__":
     run(EchoBot())
