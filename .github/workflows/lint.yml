@@ -36,7 +36,7 @@ jobs:
       - uses: jakebailey/pyright-action@v1
 
   tests:
-    name: basic import test
+    name: unit tests
     timeout-minutes: 10
     runs-on: ${{ matrix.os }}
     strategy:
@@ -52,5 +52,5 @@ jobs:
           allow-prereleases: true
           cache: pip
           cache-dependency-path: pyproject.toml
-      - run: pip install -e .[dev]
-      - run: python3 -c 'import fastapi_poe'
+      - run: pip install -e .[dev] pytest
+      - run: pytest tests/
