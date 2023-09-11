@@ -25,6 +25,7 @@ dependencies = [
     "uvicorn",
     "httpx",
     "httpx-sse",
+    "pydantic>2",
 ]
 
 [project.urls]
