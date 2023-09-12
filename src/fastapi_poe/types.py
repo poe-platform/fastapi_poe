@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import Literal, TypeAlias
 
 Identifier: TypeAlias = str
@@ -77,6 +77,8 @@ class ReportErrorRequest(BaseRequest):
 
 
 class SettingsResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     context_clear_window_secs: Optional[int] = None  # deprecated
     allow_user_context_clear: bool = True  # deprecated
     server_bot_dependencies: Dict[str, int] = Field(default_factory=dict)
@@ -86,6 +88,10 @@ class SettingsResponse(BaseModel):
 
 class PartialResponse(BaseModel):
     """Representation of a (possibly partial) response from a bot."""
+
+    # These objects are usually instantiated in user code, so we
+    # disallow extra fields to prevent mistakes.
+    model_config = ConfigDict(extra="forbid")
 
     text: str
     """Partial response text.
