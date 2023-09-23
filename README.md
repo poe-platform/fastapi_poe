@@ -20,8 +20,8 @@ from fastapi_poe import PoeBot, run
 from fastapi_poe.types import PartialResponse
 
 class EchoBot(PoeBot):
-    async def get_response(self, query):
-        last_message = query.query[-1].content
+    async def get_response(self, request):
+        last_message = request.query[-1].content
         yield PartialResponse(text=last_message)
 
 if __name__ == "__main__":
