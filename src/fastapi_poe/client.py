@@ -331,7 +331,16 @@ async def stream_request(
 
 
 async def get_final_response(
-    request: QueryRequest, bot_name: str, access_key: str = "", *, api_key: str = ""
+    request: QueryRequest,
+    bot_name: str,
+    access_key: str = "",
+    *,
+    api_key: str = "",
+    session: Optional[httpx.AsyncClient] = None,
+    on_error: ErrorHandler = _default_error_handler,
+    num_tries: int = 2,
+    retry_sleep_time: float = 0.5,
+    base_url: str = "https://api.poe.com/bot/",
 ) -> str:
     """Gets the final response from a Poe bot."""
     chunks: List[str] = []
@@ -341,6 +350,11 @@ async def get_final_response(
         access_key,
         api_key=api_key,
         api_key_deprecation_warning_stacklevel=3,
+        session=session,
+        on_error=on_error,
+        num_tries=num_tries,
+        retry_sleep_time=retry_sleep_time,
+        base_url=base_url,
     ):
         if isinstance(message, MetaMessage):
             continue
