@@ -133,11 +133,6 @@ class _BotContext:
         ) as event_source:
             async for event in event_source.aiter_sse():
                 event_count += 1
-                if event_count > MAX_EVENT_COUNT:
-                    await self.report_error(
-                        "Bot returned too many events", {"message_id": message_id}
-                    )
-                    raise BotErrorNoRetry("Bot returned too many events")
                 if event.event == "done":
                     # Don't send a report if we already told the bot about some other mistake.
                     if not chunks and not error_reported:
@@ -229,13 +224,6 @@ class _BotContext:
                     error_reported = True
                     continue
                 chunks.append(text)
-                total_length = sum(len(chunk) for chunk in chunks)
-                if total_length > MESSAGE_LENGTH_LIMIT:
-                    await self.report_error(
-                        "Bot returned too much text",
-                        {"message_id": message_id, "response_length": total_length},
-                    )
-                    raise BotErrorNoRetry("Bot returned too much text")
                 yield BotMessage(
                     text=text,
                     raw_response={"type": event.event, "text": event.data},
