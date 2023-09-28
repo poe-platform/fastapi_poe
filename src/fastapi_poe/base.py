@@ -144,11 +144,16 @@ class PoeBot:
 
     @staticmethod
     def error_event(
-        text: Optional[str] = None, *, allow_retry: bool = True
+        text: Optional[str] = None,
+        *,
+        allow_retry: bool = True,
+        error_type: Optional[str] = None,
     ) -> ServerSentEvent:
         data: Dict[str, Union[bool, str]] = {"allow_retry": allow_retry}
         if text is not None:
             data["text"] = text
+        if error_type is not None:
+            data["error_type"] = error_type
         return ServerSentEvent(data=json.dumps(data), event="error")
 
     # Internal handlers
@@ -175,7 +180,11 @@ class PoeBot:
                 if isinstance(event, ServerSentEvent):
                     yield event
                 elif isinstance(event, ErrorResponse):
-                    yield self.error_event(event.text, allow_retry=event.allow_retry)
+                    yield self.error_event(
+                        event.text,
+                        allow_retry=event.allow_retry,
+                        error_type=event.error_type,
+                    )
                 elif isinstance(event, MetaResponse):
                     yield self.meta_event(
                         content_type=event.content_type,
