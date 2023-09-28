@@ -6,6 +6,7 @@ from typing_extensions import Literal, TypeAlias
 Identifier: TypeAlias = str
 FeedbackType: TypeAlias = Literal["like", "dislike"]
 ContentType: TypeAlias = Literal["text/markdown", "text/plain"]
+ErrorType: TypeAlias = Literal["user_message_too_long"]
 
 
 class MessageFeedback(BaseModel):
@@ -122,6 +123,7 @@ class ErrorResponse(PartialResponse):
     """Communicate errors from server bots."""
 
     allow_retry: bool = False
+    error_type: Optional[ErrorType] = None
 
 
 class MetaResponse(PartialResponse):
