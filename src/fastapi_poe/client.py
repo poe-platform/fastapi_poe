@@ -314,6 +314,12 @@ async def stream_request(
             except Exception as e:
                 on_error(e, f"Bot request to {bot_name} failed on try {i}")
                 if got_response or i == num_tries - 1:
+                    # If it's a BotError, it probably has a good error message
+                    # that we want to show directly.
+                    if isinstance(e, BotError):
+                        raise
+                    # But if it's something else (maybe an HTTP error or something),
+                    # wrap it in a BotError that makes it clear which bot is broken.
                     raise BotError(f"Error communicating with bot {bot_name}") from e
                 await asyncio.sleep(retry_sleep_time)
 
