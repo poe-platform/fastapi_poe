@@ -326,6 +326,7 @@ async def get_bot_response(
     skip_system_prompt: Optional[bool] = None,
     logit_bias: Optional[Dict[str, float]] = None,
     stop_sequences: Optional[List[str]] = None,
+    base_url: str = "https://api.poe.com/bot/",
 ) -> AsyncGenerator[BotMessage, None]:
     additional_params = {}
     # This is so that we don't have to redefine the default values for these params.
@@ -340,14 +341,16 @@ async def get_bot_response(
 
     query = QueryRequest(
         query=messages,
-        user_id="missing",
-        conversation_id="missing",
-        message_id="missing",
+        user_id="",
+        conversation_id="",
+        message_id="",
         version=PROTOCOL_VERSION,
         type="query",
         **additional_params,
     )
-    return stream_request(request=query, bot_name=bot_name, api_key=api_key)
+    return stream_request(
+        request=query, bot_name=bot_name, api_key=api_key, base_url=base_url
+    )
 
 
 async def get_final_response(
