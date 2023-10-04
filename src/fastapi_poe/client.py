@@ -1,6 +1,6 @@
 """
 
-Client for talking to other Poe bots through the Poe third party bot API.
+Client for talking to other Poe bots through the Poe bot query API.
 For more details, see: https://developer.poe.com/server-bots/accessing-other-bots-on-poe
 
 """
