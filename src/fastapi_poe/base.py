@@ -86,7 +86,7 @@ class PoeBot:
     # Override these for your bot
 
     async def get_response(
-        self, query: QueryRequest
+        self, request: QueryRequest
     ) -> AsyncIterable[Union[PartialResponse, ServerSentEvent]]:
         """Override this to return a response to user queries."""
         yield self.text_event("hello")
@@ -174,9 +174,11 @@ class PoeBot:
         settings = await self.get_settings(settings_request)
         return JSONResponse(settings.dict())
 
-    async def handle_query(self, query: QueryRequest) -> AsyncIterable[ServerSentEvent]:
+    async def handle_query(
+        self, request: QueryRequest
+    ) -> AsyncIterable[ServerSentEvent]:
         try:
-            async for event in self.get_response(query):
+            async for event in self.get_response(request):
                 if isinstance(event, ServerSentEvent):
                     yield event
                 elif isinstance(event, ErrorResponse):
