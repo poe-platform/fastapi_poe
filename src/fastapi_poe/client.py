@@ -323,7 +323,7 @@ async def stream_request(
                 await asyncio.sleep(retry_sleep_time)
 
 
-async def get_bot_response(
+def get_bot_response(
     messages: List[ProtocolMessage],
     bot_name: str,
     api_key: str,
