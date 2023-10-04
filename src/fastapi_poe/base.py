@@ -169,7 +169,9 @@ class PoeBot:
         settings = await self.get_settings(settings_request)
         return JSONResponse(settings.dict())
 
-    async def handle_query(self, request: QueryRequest) -> AsyncIterable[ServerSentEvent]:
+    async def handle_query(
+        self, request: QueryRequest
+    ) -> AsyncIterable[ServerSentEvent]:
         try:
             async for event in self.get_response(request):
                 if isinstance(event, ServerSentEvent):
