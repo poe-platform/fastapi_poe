@@ -270,7 +270,7 @@ class _BotContext:
 
 
 def _default_error_handler(e: Exception, msg: str) -> None:
-    print("Error in Poe bot:", msg, e)
+    print("Error in Poe bot:", msg, "\n", repr(e))
 
 
 async def stream_request(
@@ -296,7 +296,7 @@ async def stream_request(
 
     async with contextlib.AsyncExitStack() as stack:
         if session is None:
-            session = await stack.enter_async_context(httpx.AsyncClient())
+            session = await stack.enter_async_context(httpx.AsyncClient(timeout=120))
         url = f"{base_url}{bot_name}"
         ctx = _BotContext(
             endpoint=url, api_key=api_key, session=session, on_error=on_error
@@ -333,6 +333,7 @@ def get_bot_response(
     logit_bias: Optional[Dict[str, float]] = None,
     stop_sequences: Optional[List[str]] = None,
     base_url: str = "https://api.poe.com/bot/",
+    session: Optional[httpx.AsyncClient] = None,
 ) -> AsyncGenerator[BotMessage, None]:
     additional_params = {}
     # This is so that we don't have to redefine the default values for these params.
@@ -355,7 +356,11 @@ def get_bot_response(
         **additional_params,
     )
     return stream_request(
-        request=query, bot_name=bot_name, api_key=api_key, base_url=base_url
+        request=query,
+        bot_name=bot_name,
+        api_key=api_key,
+        base_url=base_url,
+        session=session,
     )
 
 
