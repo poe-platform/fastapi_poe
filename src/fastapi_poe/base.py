@@ -128,7 +128,7 @@ class PoeBot:
         content_type: ContentType = "text/markdown",
         refetch_settings: bool = False,
         linkify: bool = True,
-        suggested_replies: bool = True,
+        suggested_replies: bool = False,
     ) -> ServerSentEvent:
         return ServerSentEvent(
             data=json.dumps(
