@@ -2,7 +2,7 @@
 
 Sample bot that echoes back messages.
 
-See more samples in the tutorial repo at: https://github.com/poe-platform/server-bot-quick-start
+See more samples in the tutorial repo at: https://gitub.com/poe-platform/server-bot-quick-start
 
 """
 from __future__ import annotations
