@@ -1,10 +1,16 @@
 from fastapi_poe.types import ProtocolMessage
 from fastapi_poe.client import get_bot_response
 import asyncio
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
+import uvicorn
 
 app = FastAPI()
 concated= ""
+
+# router = APIRouter()
+# router.add_api_route('/api/v2/hello-world', 
+# endpoint = HelloWorld().read_hello, methods=["GET"])
+# app.include_router(router)
 
 @app.get("/")
 async def root():
@@ -41,5 +47,4 @@ async def concat_message(apikey, request, botname):
         concated = concated + partial.text
 
 if __name__ == "__main__":
-    asyncio.run(concat_message("안녕"))
-    print("concated: " + concated) 
+   uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
