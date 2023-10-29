@@ -14,10 +14,17 @@ concated= ""
 # endpoint = HelloWorld().read_hello, methods=["GET"])
 # app.include_router(router)
 
+from pydantic import BaseModel
+
+
+class Item(BaseModel):
+    apikey: str
+    request: str
+
 @app.post("/liama/")
-async def create_item(item: dict):
+async def call_liama(item: Item):
     global concated # 전역변수 사용
-    await concat_message(item.body.apikey, item.body.request, "Llama-2-70b")
+    await concat_message(item.apikey, item.request, "Llama-2-70b")
     
     return JSONResponse(content={"message": concated}, status_code=201)
 
