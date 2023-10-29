@@ -1,5 +1,7 @@
 from fastapi_poe.types import ProtocolMessage
 from fastapi_poe.client import get_bot_response
+from fastapi.responses import JSONResponse
+from fastapi.requests import Request
 import asyncio
 from fastapi import FastAPI, APIRouter
 import uvicorn
@@ -11,6 +13,14 @@ concated= ""
 # router.add_api_route('/api/v2/hello-world', 
 # endpoint = HelloWorld().read_hello, methods=["GET"])
 # app.include_router(router)
+
+@app.post("/liama/")
+async def create_item(item: dict):
+    global concated # 전역변수 사용
+    await concat_message(item.apikey, item.request, "Llama-2-70b")
+    
+    return JSONResponse(content={"message": concated}, status_code=201)
+
 
 @app.get("/")
 async def root():
@@ -48,3 +58,4 @@ async def concat_message(apikey, request, botname):
 
 if __name__ == "__main__":
    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+   #test_endpoint()
