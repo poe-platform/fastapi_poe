@@ -26,7 +26,7 @@ async def call_liama(item: Item):
     global concated # 전역변수 사용
     await concat_message(item.apikey, item.request, "Llama-2-70b")
     
-    return JSONResponse(content={"message": concated}, status_code=201)
+    return JSONResponse(content=concated, status_code=201)
 
 
 @app.get("/")
