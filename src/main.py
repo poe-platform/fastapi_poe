@@ -21,7 +21,7 @@ class Item(BaseModel):
     apikey: str
     request: str
 
-@app.post("/liama/")
+@app.post("/liama")
 async def call_liama(item: Item):
     global concated # 전역변수 사용
     await concat_message(item.apikey, item.request, "Llama-2-70b")
@@ -31,7 +31,7 @@ async def call_liama(item: Item):
 
 @app.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return JSONResponse(content={"message": "Hello world!"}, status_code=201)
 
 @app.get("/gpt3")
 async def call_gpt3(request: str, apikey: str):
