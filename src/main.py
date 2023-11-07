@@ -24,7 +24,14 @@ class Item(BaseModel):
 @app.post("/liama")
 async def call_liama(item: Item):
     global concated # 전역변수 사용
-    await concat_message(item.apikey, item.request, "Llama-2-70b")
+    await concat_message(item.apikey, item.request, "Llama-2-13b")
+    
+    return JSONResponse(content=concated, status_code=201)
+
+@app.post("/call/{botname}")
+async def call_liama(botname: str, item: Item):
+    global concated # 전역변수 사용
+    await concat_message(item.apikey, item.request, botname)
     
     return JSONResponse(content=concated, status_code=201)
 
