@@ -1,8 +1,6 @@
 fastapi==0.104.1
 httpx==0.25.1
 httpx_sse==0.3.1
-instagrapi==2.0.0
-poe==0.0.1
 pydantic==1.10.9
 pytest==7.4.3
 Requests==2.31.0
