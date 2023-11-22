@@ -1,15 +1,12 @@
 from fastapi_poe.types import ProtocolMessage
 from fastapi_poe.client import get_bot_response
 from fastapi.responses import JSONResponse
-from fastapi.requests import Request
 from fastapi.exceptions import HTTPException
-import asyncio
 from fastapi import FastAPI, APIRouter, File, UploadFile, Depends, Form, status
 from typing import Optional, Dict
 from dependencies import ClientStorage, get_clients
 import uvicorn
 import requests
-import os
 import tempfile
 
 app = FastAPI()
