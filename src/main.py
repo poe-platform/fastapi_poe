@@ -18,6 +18,10 @@ concated= ""
 
 from pydantic import BaseModel, AnyHttpUrl
 
+@app.get('/health')
+def health():
+    print('health endpoint')
+    return "200"
 
 class Item(BaseModel):
     apikey: str
