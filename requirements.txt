@@ -1,6 +1,6 @@
 pydantic
 fastapi==0.104.1
-fastapi_poe==0.0.23
+instagrapi==2.0.0
 httpx==0.25.1
 httpx_sse==0.3.1
 pytest==7.4.3
@@ -9,3 +9,5 @@ sse_starlette==1.6.5
 tinydb==4.8.0
 typing_extensions==4.8.0
 uvicorn==0.24.0.post1
+Pillow==10.0.1
+python-multipart==0.0.6
