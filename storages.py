@@ -1,9 +1,11 @@
 from urllib import parse
 from instagrapi import Client
 from tinydb import TinyDB, Query
+import logging
 import json
 
 class ClientStorage:
+    logger = logging.getLogger("uvicorn.default")
     db = TinyDB('./db.json')
 
     def client(self):
@@ -20,6 +22,7 @@ class ClientStorage:
         try:
             settings = json.loads(self.db.search(Query().sessionid == key)[0]['settings'])
             cl = Client()
+            self.logger.info(f"Request: {settings}")
             cl.set_settings(settings)
             cl.get_timeline_feed()
             return cl
@@ -31,6 +34,7 @@ class ClientStorage:
         """
         key = parse.unquote(cl.sessionid.strip(" \""))
         self.db.insert({'sessionid': key, 'settings': json.dumps(cl.get_settings())})
+        self.logger.info(f"new setting inserted : {key}")
         return True
 
     def close(self):
