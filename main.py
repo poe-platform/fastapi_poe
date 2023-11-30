@@ -28,10 +28,37 @@ class Item(BaseModel):
     apikey: str
     request: str
 
+
+@app.post("/upload/video/by_url")
+async def video_upload(sessionid: str = Form(...),
+                       url: str = Form(...),
+                       caption: str = Form(...),
+                       thumbnail: Optional[UploadFile] = File(None),
+                       clients: ClientStorage = Depends(get_clients)
+                       ):
+    """Upload photo by URL and configure to feed
+    """
+    cl = clients.get(sessionid)
+    
+    content = requests.get(url).content
+    if thumbnail is not None:
+        thumb = await thumbnail.read()
+        return await video_upload_post(
+            cl, content, caption=caption,
+            thumbnail=thumb)
+    return await video_upload_post(
+        cl, content, caption=caption)
+
+
 async def photo_upload_post(cl, content : bytes, **kwargs):
     with tempfile.NamedTemporaryFile(suffix='.jpg') as fp:
         fp.write(content)
         return cl.photo_upload(fp.name, **kwargs)
+    
+async def video_upload_post(cl, content, **kwargs):
+    with tempfile.NamedTemporaryFile(suffix='.mp4') as fp:
+        fp.write(content)
+        return cl.video_upload(fp.name, **kwargs)
 
 @app.post("/instagram/login")
 async def auth_login(username: str = Form(...),
