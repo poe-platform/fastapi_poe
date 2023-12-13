@@ -103,6 +103,9 @@ class PartialResponse(BaseModel):
 
     """
 
+    data: Optional[Dict[str, Any]] = None
+    """Used when a bot returns the json event."""
+
     raw_response: object = None
     """For debugging, the raw response from the bot."""
 
@@ -133,3 +136,35 @@ class MetaResponse(PartialResponse):
     suggested_replies: bool = True
     content_type: ContentType = "text/markdown"
     refetch_settings: bool = False
+
+
+class ToolDefinition(BaseModel):
+    class FunctionDefinition(BaseModel):
+        class ParametersDefinition(BaseModel):
+            type: str
+            properties: Dict[str, object]
+            required: Optional[List[str]] = None
+
+        name: str
+        description: str
+        parameters: ParametersDefinition
+
+    type: str
+    function: FunctionDefinition
+
+
+class ToolCallDefinition(BaseModel):
+    class FunctionDefinition(BaseModel):
+        name: str
+        arguments: str
+
+    id: str
+    type: str
+    function: FunctionDefinition
+
+
+class ToolResultDefinition(BaseModel):
+    role: str
+    name: str
+    tool_call_id: str
+    content: str
