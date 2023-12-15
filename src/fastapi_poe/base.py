@@ -6,9 +6,9 @@ import logging
 import os
 import sys
 import warnings
-import httpx
 from typing import Any, AsyncIterable, Dict, Optional, Union
 
+import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse
