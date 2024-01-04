@@ -86,7 +86,6 @@ def auth_user(
 
 class PoeBot:
     # Override these for your bot
-
     async def get_response(
         self, request: QueryRequest
     ) -> AsyncIterable[Union[PartialResponse, ServerSentEvent]]:
@@ -111,11 +110,12 @@ class PoeBot:
         self.file_attachment_lock = asyncio.Lock()
 
     async def post_message_attachment(
-        self, message_id, file_data, filename, access_key
+        self, access_key, message_id, download_url=None, file_data=None, filename=None
     ):
+
         task = asyncio.create_task(
             self._make_file_attachment_request(
-                message_id, file_data, filename, access_key
+                access_key, message_id, download_url, file_data, filename
             )
         )
         async with self.file_attachment_lock:
@@ -124,19 +124,34 @@ class PoeBot:
             self.pending_file_attachments[message_id] = files_for_message
 
     async def _make_file_attachment_request(
-        self, message_id, file_data, filename, access_key
+        self, access_key, message_id, download_url=None, file_data=None, filename=None
     ):
+        assert download_url or (
+            file_data and filename
+        ), "Must provide either download_url or file_data and filename."
+
+        if file_data:
+            assert filename, "Must provide filename if providing file_data."
+
+        if download_url:
+            assert (
+                not file_data and not filename
+            ), "Cannot provide file_data or filename if providing download_url."
+
         url = "https://www.quora.com/poe_api/file_attachment_POST"
 
         async with httpx.AsyncClient(timeout=120) as client:
             try:
-                files = {"file": (filename, file_data)}
-                data = {"message_id": message_id}
                 headers = {"Authorization": f"{access_key}"}
-
-                request = httpx.Request(
-                    "POST", url, files=files, data=data, headers=headers
-                )
+                if download_url:
+                    data = {"message_id": message_id, "download_url": download_url}
+                    request = httpx.Request("POST", url, data=data, headers=headers)
+                else:
+                    data = {"message_id": message_id}
+                    files = {"file": (filename, file_data)}
+                    request = httpx.Request(
+                        "POST", url, files=files, data=data, headers=headers
+                    )
                 response = await client.send(request)
 
                 if response.status_code != 200:
