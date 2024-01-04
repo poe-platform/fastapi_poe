@@ -68,7 +68,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         return response
 
 
-def exception_handler(request: Request, ex: HTTPException):
+def exception_handler(request, ex):
     logger.error(ex)
 
 
@@ -116,7 +116,6 @@ class PoeBot:
     async def post_message_attachment(
         self, access_key, message_id, download_url=None, file_data=None, filename=None
     ):
-
         task = asyncio.create_task(
             self._make_file_attachment_request(
                 access_key, message_id, download_url, file_data, filename
