@@ -68,7 +68,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         return response
 
 
-def exception_handler(request, ex):
+async def http_exception_handler(request, ex):
     logger.error(ex)
 
 
@@ -348,7 +348,7 @@ def make_app(
 ) -> FastAPI:
     """Create an app object. Arguments are as for run()."""
     app = FastAPI()
-    app.add_exception_handler(RequestValidationError, exception_handler)
+    app.add_exception_handler(RequestValidationError, http_exception_handler)
 
     global auth_key
     auth_key = _verify_access_key(
