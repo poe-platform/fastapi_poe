@@ -140,9 +140,7 @@ class PoeBot:
                 is_inline=is_inline,
             )
         )
-        pending_tasks_for_message = self._pending_file_attachment_tasks.get(
-            message_id, None
-        )
+        pending_tasks_for_message = self._pending_file_attachment_tasks.get(message_id)
         if pending_tasks_for_message is None:
             pending_tasks_for_message = set()
             self._pending_file_attachment_tasks[message_id] = pending_tasks_for_message
