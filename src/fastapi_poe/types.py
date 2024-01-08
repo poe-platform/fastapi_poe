@@ -86,6 +86,7 @@ class SettingsResponse(BaseModel):
     allow_attachments: bool = False
     introduction_message: str = ""
 
+
 class AttachmentUploadResponse(BaseModel):
     inline_ref: Optional[str]
 

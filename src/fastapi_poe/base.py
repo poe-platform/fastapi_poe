@@ -36,8 +36,10 @@ logger = logging.getLogger("uvicorn.default")
 class InvalidParameterError(Exception):
     pass
 
+
 class AttachmentUploadError(Exception):
     pass
+
 
 class LoggingMiddleware(BaseHTTPMiddleware):
     async def set_body(self, request: Request):
@@ -125,7 +127,7 @@ class PoeBot:
         file_data: Optional[Union[bytes, BinaryIO]] = None,
         filename: Optional[str] = None,
         content_type: Optional[str] = None,
-        is_inline: bool = False
+        is_inline: bool = False,
     ) -> AttachmentUploadResponse:
         task = asyncio.create_task(
             self._make_file_attachment_request(
@@ -135,10 +137,10 @@ class PoeBot:
                 file_data=file_data,
                 filename=filename,
                 content_type=content_type,
-                is_inline=is_inline
+                is_inline=is_inline,
             )
         )
-        pending_tasks_for_message = self._pending_file_attachment_tasks.get(message_id, None)
+        pending_tasks_for_message = self._pending_file_attachment_tasks.get(message_id)
         if pending_tasks_for_message is None:
             pending_tasks_for_message = set()
             self._pending_file_attachment_tasks[message_id] = pending_tasks_for_message
@@ -157,7 +159,7 @@ class PoeBot:
         file_data: Optional[Union[bytes, BinaryIO]] = None,
         filename: Optional[str] = None,
         content_type: Optional[str] = None,
-        is_inline: bool = False
+        is_inline: bool = False,
     ) -> AttachmentUploadResponse:
         url = "https://www.quora.com/poe_api/file_attachment_POST"
 
@@ -169,13 +171,18 @@ class PoeBot:
                         raise InvalidParameterError(
                             "Cannot provide filename or file_data if download_url is provided."
                         )
-                    data = {"message_id": message_id, "is_inline": is_inline, "download_url": download_url}
+                    data = {
+                        "message_id": message_id,
+                        "is_inline": is_inline,
+                        "download_url": download_url,
+                    }
                     request = httpx.Request("POST", url, data=data, headers=headers)
                 elif file_data and filename:
                     data = {"message_id": message_id, "is_inline": is_inline}
                     files = {
                         "file": (
-                            (filename, file_data) if content_type is None
+                            (filename, file_data)
+                            if content_type is None
                             else (filename, file_data, content_type)
                         )
                     }
@@ -189,9 +196,13 @@ class PoeBot:
                 response = await client.send(request)
 
                 if response.status_code != 200:
-                    raise AttachmentUploadError(f"{response.status_code}: {response.reason_phrase}")
+                    raise AttachmentUploadError(
+                        f"{response.status_code}: {response.reason_phrase}"
+                    )
 
-                return AttachmentUploadResponse(inline_ref=response.json().get("inline_ref"))
+                return AttachmentUploadResponse(
+                    inline_ref=response.json().get("inline_ref")
+                )
 
             except httpx.HTTPError:
                 logger.error("An HTTP error occurred when attempting to attach file")
@@ -199,7 +210,9 @@ class PoeBot:
 
     async def _process_pending_attachment_requests(self, message_id):
         try:
-            await asyncio.gather(*self._pending_file_attachment_tasks.pop(message_id, []))
+            await asyncio.gather(
+                *self._pending_file_attachment_tasks.pop(message_id, [])
+            )
         except Exception:
             logger.error("Error processing pending attachment requests")
             raise
