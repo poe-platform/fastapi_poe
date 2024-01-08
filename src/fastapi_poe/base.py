@@ -159,7 +159,7 @@ class PoeBot:
         content_type: Optional[str] = None,
         is_inline: bool = False
     ) -> AttachmentUploadResponse:
-        url = "https://www.quora.com/poe_api/file_attachment_POST"
+        url = "https://www.quora.com/poe_api/file_attachment_3RD_PARTY_POST"
 
         async with httpx.AsyncClient(timeout=120) as client:
             try:
