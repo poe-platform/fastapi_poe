@@ -1,7 +1,12 @@
-from typing import Any, Dict, List, Optional
+import asyncio
+import httpx
+import logging
+from typing import Any, BinaryIO, Dict, List, Optional, Set, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import Literal, TypeAlias
+
+logger = logging.getLogger("uvicorn.default")
 
 Identifier: TypeAlias = str
 FeedbackType: TypeAlias = Literal["like", "dislike"]
@@ -22,6 +27,10 @@ class Attachment(BaseModel):
     name: str
 
 
+class AttachmentUploadResponse(BaseModel):
+    inline_ref: Optional[str]
+
+
 class ProtocolMessage(BaseModel):
     """A message as used in the Poe protocol."""
 
@@ -32,6 +41,14 @@ class ProtocolMessage(BaseModel):
     message_id: str = ""
     feedback: List[MessageFeedback] = Field(default_factory=list)
     attachments: List[Attachment] = Field(default_factory=list)
+
+
+class InvalidParameterError(Exception):
+    pass
+
+
+class AttachmentUploadError(Exception):
+    pass
 
 
 class BaseRequest(BaseModel):
@@ -55,6 +72,88 @@ class QueryRequest(BaseRequest):
     skip_system_prompt: bool = False
     logit_bias: Dict[str, float] = {}
     stop_sequences: List[str] = []
+
+    _pending_tasks: Set[asyncio.Task] = set()
+
+    async def post_message_attachment(
+        self,
+        *,
+        download_url: Optional[str] = None,
+        file_data: Optional[Union[bytes, BinaryIO]] = None,
+        filename: Optional[str] = None,
+        content_type: Optional[str] = None,
+        is_inline: bool = False,
+    ) -> AttachmentUploadResponse:
+        task = asyncio.create_task(
+            self._make_file_attachment_request(
+                download_url=download_url,
+                file_data=file_data,
+                filename=filename,
+                content_type=content_type,
+                is_inline=is_inline,
+            )
+        )
+        self._pending_tasks.add(task)
+        try:
+            return await task
+        finally:
+            self._pending_tasks.remove(task)
+
+    async def _make_file_attachment_request(
+        self,
+        *,
+        download_url: Optional[str] = None,
+        file_data: Optional[Union[bytes, BinaryIO]] = None,
+        filename: Optional[str] = None,
+        content_type: Optional[str] = None,
+        is_inline: bool = False,
+    ) -> AttachmentUploadResponse:
+        url = "https://www.quora.com/poe_api/file_attachment_3RD_PARTY_POST"
+
+        async with httpx.AsyncClient(timeout=120) as client:
+            try:
+                headers = {"Authorization": f"{self.access_key}"}
+                if download_url:
+                    if file_data or filename:
+                        raise InvalidParameterError(
+                            "Cannot provide filename or file_data if download_url is provided."
+                        )
+                    data = {
+                        "message_id": self.message_id,
+                        "is_inline": is_inline,
+                        "download_url": download_url,
+                    }
+                    request = httpx.Request("POST", url, data=data, headers=headers)
+                elif file_data and filename:
+                    data = {"message_id": self.message_id, "is_inline": is_inline}
+                    files = {
+                        "file": (
+                            (filename, file_data)
+                            if content_type is None
+                            else (filename, file_data, content_type)
+                        )
+                    }
+                    request = httpx.Request(
+                        "POST", url, files=files, data=data, headers=headers
+                    )
+                else:
+                    raise InvalidParameterError(
+                        "Must provide either download_url or file_data and filename."
+                    )
+                response = await client.send(request)
+
+                if response.status_code != 200:
+                    raise AttachmentUploadError(
+                        f"{response.status_code}: {response.reason_phrase}"
+                    )
+
+                return AttachmentUploadResponse(
+                    inline_ref=response.json().get("inline_ref")
+                )
+
+            except httpx.HTTPError:
+                logger.error("An HTTP error occurred when attempting to attach file")
+                raise
 
 
 class SettingsRequest(BaseRequest):
@@ -85,10 +184,6 @@ class SettingsResponse(BaseModel):
     server_bot_dependencies: Dict[str, int] = Field(default_factory=dict)
     allow_attachments: bool = False
     introduction_message: str = ""
-
-
-class AttachmentUploadResponse(BaseModel):
-    inline_ref: Optional[str]
 
 
 class PartialResponse(BaseModel):

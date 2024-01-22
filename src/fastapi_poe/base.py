@@ -17,10 +17,12 @@ from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from fastapi_poe.types import (
+    AttachmentUploadError,
     AttachmentUploadResponse,
     ContentType,
     ErrorResponse,
     Identifier,
+    InvalidParameterError,
     MetaResponse,
     PartialResponse,
     QueryRequest,
@@ -31,14 +33,6 @@ from fastapi_poe.types import (
 )
 
 logger = logging.getLogger("uvicorn.default")
-
-
-class InvalidParameterError(Exception):
-    pass
-
-
-class AttachmentUploadError(Exception):
-    pass
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):
@@ -208,10 +202,11 @@ class PoeBot:
                 logger.error("An HTTP error occurred when attempting to attach file")
                 raise
 
-    async def _process_pending_attachment_requests(self, message_id):
+    async def _process_pending_attachment_requests(self, request: QueryRequest) -> None:
         try:
             await asyncio.gather(
-                *self._pending_file_attachment_tasks.pop(message_id, [])
+                *self._pending_file_attachment_tasks.pop(request.message_id, []),
+                *request._pending_tasks,
             )
         except Exception:
             logger.error("Error processing pending attachment requests")
@@ -317,7 +312,7 @@ class PoeBot:
             logger.exception("Error responding to query")
             yield self.error_event(repr(e), allow_retry=False)
         try:
-            await self._process_pending_attachment_requests(request.message_id)
+            await self._process_pending_attachment_requests(request)
         except Exception as e:
             logger.exception("Error processing pending attachment requests")
             yield self.error_event(repr(e), allow_retry=False)
