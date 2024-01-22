@@ -6,7 +6,7 @@ import logging
 import os
 import sys
 import warnings
-from typing import Any, AsyncIterable, BinaryIO, Dict, Optional, Union
+from typing import AsyncIterable, BinaryIO, Dict, Optional, Union
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
@@ -408,27 +408,31 @@ def make_app(
         )
 
     @app.post("/")
-    async def poe_post(request: Dict[str, Any], dict=Depends(auth_user)) -> Response:
-        if request["type"] == "query":
+    async def poe_post(request: Request, dict=Depends(auth_user)) -> Response:
+        request_body = await request.json()
+        request_body["http_request"] = request
+        if request_body["type"] == "query":
             return EventSourceResponse(
                 bot.handle_query(
                     QueryRequest.parse_obj(
                         {
-                            **request,
+                            **request_body,
                             "access_key": auth_key or "<missing>",
                             "api_key": auth_key or "<missing>",
                         }
                     )
                 )
             )
-        elif request["type"] == "settings":
-            return await bot.handle_settings(SettingsRequest.parse_obj(request))
-        elif request["type"] == "report_feedback":
+        elif request_body["type"] == "settings":
+            return await bot.handle_settings(SettingsRequest.parse_obj(request_body))
+        elif request_body["type"] == "report_feedback":
             return await bot.handle_report_feedback(
-                ReportFeedbackRequest.parse_obj(request)
+                ReportFeedbackRequest.parse_obj(request_body)
             )
-        elif request["type"] == "report_error":
-            return await bot.handle_report_error(ReportErrorRequest.parse_obj(request))
+        elif request_body["type"] == "report_error":
+            return await bot.handle_report_error(
+                ReportErrorRequest.parse_obj(request_body)
+            )
         else:
             raise HTTPException(status_code=501, detail="Unsupported request type")
 
