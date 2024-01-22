@@ -1,5 +1,6 @@
 from typing import Any, Dict, List, Optional
 
+from fastapi import Request
 from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import Literal, TypeAlias
 
@@ -37,8 +38,12 @@ class ProtocolMessage(BaseModel):
 class BaseRequest(BaseModel):
     """Common data for all requests."""
 
+    class Config:
+        arbitrary_types_allowed = True
+
     version: str
     type: Literal["query", "settings", "report_feedback", "report_error"]
+    http_request: Request
 
 
 class QueryRequest(BaseRequest):
