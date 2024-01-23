@@ -1,6 +1,7 @@
 import asyncio
 import httpx
 import logging
+from dataclasses import dataclass
 from typing import Any, BinaryIO, Dict, List, Optional, Set, Union
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -245,7 +246,8 @@ class MetaResponse(PartialResponse):
     refetch_settings: bool = False
 
 
-class AttachFileResponse(PartialResponse):
+@dataclass
+class AttachFileResponse:
     """Communicate attachment files from server bots."""
 
     file_data: Union[bytes, BinaryIO]

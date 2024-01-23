@@ -94,7 +94,7 @@ class PoeBot:
     # Override these for your bot
     async def get_response(
         self, request: QueryRequest
-    ) -> AsyncIterable[Union[PartialResponse, ServerSentEvent]]:
+    ) -> AsyncIterable[Union[PartialResponse, AttachFileResponse, ServerSentEvent]]:
         """Override this to return a response to user queries."""
         yield self.text_event("hello")
 
