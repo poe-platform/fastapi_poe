@@ -18,6 +18,8 @@ __all__ = [
     "ErrorResponse",
     "MetaResponse",
     "ToolDefinition",
+    "AttachFileResponse",
+    "ImageResponse",
 ]
 
 from .base import PoeBot, make_app, run
@@ -29,8 +31,10 @@ from .client import (
     stream_request,
 )
 from .types import (
+    AttachFileResponse,
     Attachment,
     ErrorResponse,
+    ImageResponse,
     MetaResponse,
     PartialResponse,
     ProtocolMessage,
