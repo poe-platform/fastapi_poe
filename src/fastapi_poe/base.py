@@ -4,6 +4,7 @@ import copy
 import json
 import logging
 import os
+import re
 import sys
 import warnings
 from typing import Any, AsyncIterable, BinaryIO, Dict, Optional, Union
@@ -17,6 +18,7 @@ from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from fastapi_poe.types import (
+    AttachFileResponse,
     AttachmentUploadError,
     AttachmentUploadResponse,
     ContentType,
@@ -264,6 +266,18 @@ class PoeBot:
             data["error_type"] = error_type
         return ServerSentEvent(data=json.dumps(data), event="error")
 
+    @staticmethod
+    def inline_attachment_event(
+        *,
+        inline_ref: str,
+        description: Optional[str] = None,
+    ):
+        if description:
+            text = f"![{_markdown_escape(description)}][{inline_ref}]"
+        else:
+            text = f"![{inline_ref}]"
+        return ServerSentEvent(data=json.dumps({"text": text}), event="text")
+
     # Internal handlers
 
     async def handle_report_feedback(
@@ -302,6 +316,23 @@ class PoeBot:
                         linkify=event.linkify,
                         suggested_replies=event.suggested_replies,
                     )
+                elif isinstance(event, AttachFileResponse):
+                    upload_task = request.post_message_attachment(
+                        file_data=event.file_data,
+                        filename=event.filename,
+                        content_type=event.content_type,
+                        is_inline=event.is_inline,
+                    )
+                    if event.is_inline:
+                        upload_response = await upload_task
+                        if not upload_response.inline_ref:
+                            raise AttachmentUploadError(
+                                "Attachment upload failed, no inline_ref returned."
+                            )
+                        yield self.inline_attachment_event(
+                            inline_ref=upload_response.inline_ref,
+                            description=event.description or event.filename,
+                        )
                 elif event.is_suggested_reply:
                     yield self.suggested_reply_event(event.text)
                 elif event.is_replace_response:
@@ -317,6 +348,14 @@ class PoeBot:
             logger.exception("Error processing pending attachment requests")
             yield self.error_event(repr(e), allow_retry=False)
         yield self.done_event()
+
+
+ASCII_PUNCTUATION_CAPTURE_REGEX = re.compile(r"""([!"#$%&'()*+,\-.\/:;<=>?@\[\\\]^_`{|}~])""")
+
+def _markdown_escape(text: str) -> str:
+    return ASCII_PUNCTUATION_CAPTURE_REGEX.sub(
+        r"\\\1", text
+    )
 
 
 def _find_access_key(*, access_key: str, api_key: str) -> Optional[str]:

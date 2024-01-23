@@ -237,6 +237,20 @@ class MetaResponse(PartialResponse):
     refetch_settings: bool = False
 
 
+class AttachFileResponse(PartialResponse):
+    """Communicate attachment files from server bots."""
+
+    file_data: Union[bytes, BinaryIO]
+    filename: str
+    content_type: Optional[str] = None
+    is_inline: bool = False
+    description: Optional[str] = None
+
+
+class ImageResponse(AttachFileResponse):
+    is_inline: bool = True
+
+
 class ToolDefinition(BaseModel):
     class FunctionDefinition(BaseModel):
         class ParametersDefinition(BaseModel):
