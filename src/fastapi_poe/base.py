@@ -4,6 +4,7 @@ import copy
 import json
 import logging
 import os
+import re
 import sys
 import warnings
 from typing import AsyncIterable, BinaryIO, Dict, Optional, Union
@@ -17,10 +18,13 @@ from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from fastapi_poe.types import (
+    AttachFileResponse,
+    AttachmentUploadError,
     AttachmentUploadResponse,
     ContentType,
     ErrorResponse,
     Identifier,
+    InvalidParameterError,
     MetaResponse,
     PartialResponse,
     QueryRequest,
@@ -31,14 +35,6 @@ from fastapi_poe.types import (
 )
 
 logger = logging.getLogger("uvicorn.default")
-
-
-class InvalidParameterError(Exception):
-    pass
-
-
-class AttachmentUploadError(Exception):
-    pass
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):
@@ -98,7 +94,7 @@ class PoeBot:
     # Override these for your bot
     async def get_response(
         self, request: QueryRequest
-    ) -> AsyncIterable[Union[PartialResponse, ServerSentEvent]]:
+    ) -> AsyncIterable[Union[PartialResponse, AttachFileResponse, ServerSentEvent]]:
         """Override this to return a response to user queries."""
         yield self.text_event("hello")
 
@@ -161,8 +157,6 @@ class PoeBot:
         content_type: Optional[str] = None,
         is_inline: bool = False,
     ) -> AttachmentUploadResponse:
-        url = "https://www.quora.com/poe_api/file_attachment_3RD_PARTY_POST"
-
         async with httpx.AsyncClient(timeout=120) as client:
             try:
                 headers = {"Authorization": f"{access_key}"}
@@ -176,7 +170,7 @@ class PoeBot:
                         "is_inline": is_inline,
                         "download_url": download_url,
                     }
-                    request = httpx.Request("POST", url, data=data, headers=headers)
+                    request = httpx.Request("POST", self._attachment_upload_url, data=data, headers=headers)
                 elif file_data and filename:
                     data = {"message_id": message_id, "is_inline": is_inline}
                     files = {
@@ -187,7 +181,11 @@ class PoeBot:
                         )
                     }
                     request = httpx.Request(
-                        "POST", url, files=files, data=data, headers=headers
+                        "POST",
+                        self._attachment_upload_url,
+                        files=files,
+                        data=data,
+                        headers=headers,
                     )
                 else:
                     raise InvalidParameterError(
@@ -208,10 +206,11 @@ class PoeBot:
                 logger.error("An HTTP error occurred when attempting to attach file")
                 raise
 
-    async def _process_pending_attachment_requests(self, message_id):
+    async def _process_pending_attachment_requests(self, request: QueryRequest) -> None:
         try:
             await asyncio.gather(
-                *self._pending_file_attachment_tasks.pop(message_id, [])
+                *self._pending_file_attachment_tasks.pop(request.message_id, []),
+                *request._pending_tasks,
             )
         except Exception:
             logger.error("Error processing pending attachment requests")
@@ -269,7 +268,19 @@ class PoeBot:
             data["error_type"] = error_type
         return ServerSentEvent(data=json.dumps(data), event="error")
 
+    @staticmethod
+    def inline_attachment_event(*, inline_ref: str, description: Optional[str] = None):
+        if description:
+            text = f"![{_markdown_escape(description)}][{inline_ref}]"
+        else:
+            text = f"![{inline_ref}]"
+        return ServerSentEvent(data=json.dumps({"text": text}), event="text")
+
     # Internal handlers
+
+    _attachment_upload_url = (
+        "https://www.quora.com/poe_api/file_attachment_3RD_PARTY_POST"
+    )
 
     async def handle_report_feedback(
         self, feedback_request: ReportFeedbackRequest
@@ -307,6 +318,25 @@ class PoeBot:
                         linkify=event.linkify,
                         suggested_replies=event.suggested_replies,
                     )
+                elif isinstance(event, AttachFileResponse):
+                    upload_task = asyncio.create_task(
+                        request.post_message_attachment(
+                            file_data=event.file_data,
+                            filename=event.filename,
+                            content_type=event.content_type,
+                            is_inline=event.is_inline,
+                        )
+                    )
+                    if event.is_inline:
+                        upload_response = await upload_task
+                        if not upload_response.inline_ref:
+                            raise AttachmentUploadError(
+                                "Attachment upload failed, no inline_ref returned."
+                            )
+                        yield self.inline_attachment_event(
+                            inline_ref=upload_response.inline_ref,
+                            description=event.description or event.filename,
+                        )
                 elif event.is_suggested_reply:
                     yield self.suggested_reply_event(event.text)
                 elif event.is_replace_response:
@@ -317,11 +347,19 @@ class PoeBot:
             logger.exception("Error responding to query")
             yield self.error_event(repr(e), allow_retry=False)
         try:
-            await self._process_pending_attachment_requests(request.message_id)
+            await self._process_pending_attachment_requests(request)
         except Exception as e:
             logger.exception("Error processing pending attachment requests")
             yield self.error_event(repr(e), allow_retry=False)
         yield self.done_event()
+
+
+ASCII_PUNCTUATION_CAPTURE_REGEX = re.compile(
+    r"""([!"#$%&'()*+,\-.\/:;<=>?@\[\\\]^_`{|}~])"""
+)
+
+def _markdown_escape(text: str) -> str:
+    return ASCII_PUNCTUATION_CAPTURE_REGEX.sub(r"\\\1", text)
 
 
 def _find_access_key(*, access_key: str, api_key: str) -> Optional[str]:

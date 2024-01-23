@@ -45,6 +45,14 @@ class ProtocolMessage(BaseModel):
     attachments: List[Attachment] = Field(default_factory=list)
 
 
+class InvalidParameterError(Exception):
+    pass
+
+
+class AttachmentUploadError(Exception):
+    pass
+
+
 class BaseRequest(BaseModel):
     """Common data for all requests."""
 
@@ -238,6 +246,22 @@ class MetaResponse(PartialResponse):
     suggested_replies: bool = True
     content_type: ContentType = "text/markdown"
     refetch_settings: bool = False
+
+
+@dataclass
+class AttachFileResponse:
+    """Communicate attachment files from server bots."""
+
+    file_data: Union[bytes, BinaryIO]
+    filename: str
+    content_type: Optional[str] = None
+    is_inline: bool = False
+    description: Optional[str] = None
+
+
+@dataclass
+class ImageResponse(AttachFileResponse):
+    is_inline: bool = True
 
 
 class ToolDefinition(BaseModel):
