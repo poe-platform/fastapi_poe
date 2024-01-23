@@ -257,6 +257,7 @@ class AttachFileResponse:
     description: Optional[str] = None
 
 
+@dataclass
 class ImageResponse(AttachFileResponse):
     is_inline: bool = True
 
