@@ -157,7 +157,6 @@ class PoeBot:
         content_type: Optional[str] = None,
         is_inline: bool = False,
     ) -> AttachmentUploadResponse:
-        url = "https://www.quora.com/poe_api/file_attachment_3RD_PARTY_POST"
 
         async with httpx.AsyncClient(timeout=120) as client:
             try:
@@ -172,7 +171,12 @@ class PoeBot:
                         "is_inline": is_inline,
                         "download_url": download_url,
                     }
-                    request = httpx.Request("POST", url, data=data, headers=headers)
+                    request = httpx.Request(
+                        "POST",
+                        self._attachment_upload_url,
+                        data=data,
+                        headers=headers
+                    )
                 elif file_data and filename:
                     data = {"message_id": message_id, "is_inline": is_inline}
                     files = {
@@ -183,7 +187,11 @@ class PoeBot:
                         )
                     }
                     request = httpx.Request(
-                        "POST", url, files=files, data=data, headers=headers
+                        "POST",
+                        self._attachment_upload_url,
+                        files=files,
+                        data=data,
+                        headers=headers
                     )
                 else:
                     raise InvalidParameterError(
@@ -280,6 +288,8 @@ class PoeBot:
 
     # Internal handlers
 
+    _attachment_upload_url = "https://www.quora.com/poe_api/file_attachment_3RD_PARTY_POST"
+
     async def handle_report_feedback(
         self, feedback_request: ReportFeedbackRequest
     ) -> JSONResponse:
@@ -317,11 +327,13 @@ class PoeBot:
                         suggested_replies=event.suggested_replies,
                     )
                 elif isinstance(event, AttachFileResponse):
-                    upload_task = request.post_message_attachment(
-                        file_data=event.file_data,
-                        filename=event.filename,
-                        content_type=event.content_type,
-                        is_inline=event.is_inline,
+                    upload_task = asyncio.create_task(
+                        request.post_message_attachment(
+                            file_data=event.file_data,
+                            filename=event.filename,
+                            content_type=event.content_type,
+                            is_inline=event.is_inline,
+                        )
                     )
                     if event.is_inline:
                         upload_response = await upload_task

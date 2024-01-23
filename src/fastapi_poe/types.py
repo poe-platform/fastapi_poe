@@ -74,6 +74,7 @@ class QueryRequest(BaseRequest):
     stop_sequences: List[str] = []
 
     _pending_tasks: Set[asyncio.Task] = set()
+    _attachment_upload_url = "https://www.quora.com/poe_api/file_attachment_3RD_PARTY_POST"
 
     async def post_message_attachment(
         self,
@@ -108,8 +109,6 @@ class QueryRequest(BaseRequest):
         content_type: Optional[str] = None,
         is_inline: bool = False,
     ) -> AttachmentUploadResponse:
-        url = "https://www.quora.com/poe_api/file_attachment_3RD_PARTY_POST"
-
         async with httpx.AsyncClient(timeout=120) as client:
             try:
                 headers = {"Authorization": f"{self.access_key}"}
@@ -123,7 +122,12 @@ class QueryRequest(BaseRequest):
                         "is_inline": is_inline,
                         "download_url": download_url,
                     }
-                    request = httpx.Request("POST", url, data=data, headers=headers)
+                    request = httpx.Request(
+                        "POST",
+                        self._attachment_upload_url,
+                        data=data,
+                        headers=headers
+                    )
                 elif file_data and filename:
                     data = {"message_id": self.message_id, "is_inline": is_inline}
                     files = {
@@ -134,7 +138,11 @@ class QueryRequest(BaseRequest):
                         )
                     }
                     request = httpx.Request(
-                        "POST", url, files=files, data=data, headers=headers
+                        "POST",
+                        self._attachment_upload_url,
+                        files=files,
+                        data=data,
+                        headers=headers
                     )
                 else:
                     raise InvalidParameterError(
