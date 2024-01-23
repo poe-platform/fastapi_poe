@@ -170,7 +170,9 @@ class PoeBot:
                         "is_inline": is_inline,
                         "download_url": download_url,
                     }
-                    request = httpx.Request("POST", self._attachment_upload_url, data=data, headers=headers)
+                    request = httpx.Request(
+                        "POST", self._attachment_upload_url, data=data, headers=headers
+                    )
                 elif file_data and filename:
                     data = {"message_id": message_id, "is_inline": is_inline}
                     files = {
