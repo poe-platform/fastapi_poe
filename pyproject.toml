@@ -48,6 +48,25 @@ select = [
   "B",  # bugbear
   "SIM",  # simplify
   "UP",  # pyupgrade
+  "PIE810",  # startswith/endswith with a tuple
+  "SIM101",  # mergeable isinstance() calls
+  "SIM201",  # "not ... == ..." -> "... != ..."
+  "SIM202",  # "not ... != ..." -> "... == ..."
+  "C400",  # unnecessary list() calls
+  "C401",  # unnecessary set() calls
+  "C402",  # unnecessary dict() calls
+  "C403",  # unnecessary listcomp within set() call
+  "C404",  # unnecessary listcomp within dict() call
+  "C405",  # use set literals
+  "C406",  # use dict literals
+  "C409",  # tuple() calls that can be replaced with literals
+  "C410",  # list() calls that can be replaced with literals
+  "C411",  # list() calls with genexps that can be replaced with listcomps
+  "C413",  # unnecessary list() calls around sorted()
+  "C414",  # unnecessary list() calls inside sorted()
+  "C417",  # unnecessary map() calls that can be replaced with listcomps/genexps
+  "C418",  # unnecessary dict() calls that can be replaced with literals
+  "PERF101",  # unnecessary list() calls that can be replaced with literals
 ]
 
 ignore = [
