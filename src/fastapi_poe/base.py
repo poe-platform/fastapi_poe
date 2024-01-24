@@ -26,6 +26,7 @@ from fastapi_poe.types import (
     QueryRequest,
     ReportErrorRequest,
     ReportFeedbackRequest,
+    RequestContext,
     SettingsRequest,
     SettingsResponse,
 )
@@ -96,19 +97,42 @@ def auth_user(
 
 class PoeBot:
     # Override these for your bot
+
+    async def get_response_with_context(
+        self, request: QueryRequest, context: RequestContext
+    ) -> AsyncIterable[Union[PartialResponse, ServerSentEvent]]:
+        async for event in self.get_response(request):
+            yield event
+
     async def get_response(
         self, request: QueryRequest
     ) -> AsyncIterable[Union[PartialResponse, ServerSentEvent]]:
         """Override this to return a response to user queries."""
         yield self.text_event("hello")
 
+    async def get_settings_with_context(
+        self, setting: SettingsRequest, context: RequestContext
+    ) -> SettingsResponse:
+        settings = await self.get_settings(setting)
+        return settings
+
     async def get_settings(self, setting: SettingsRequest) -> SettingsResponse:
         """Override this to return non-standard settings."""
         return SettingsResponse()
 
+    async def on_feedback_with_context(
+        self, feedback_request: ReportFeedbackRequest, context: RequestContext
+    ) -> None:
+        await self.on_feedback(feedback_request)
+
     async def on_feedback(self, feedback_request: ReportFeedbackRequest) -> None:
         """Override this to record feedback from the user."""
         pass
+
+    async def on_error_with_context(
+        self, error_request: ReportErrorRequest, context: RequestContext
+    ) -> None:
+        await self.on_error(error_request)
 
     async def on_error(self, error_request: ReportErrorRequest) -> None:
         """Override this to record errors from the Poe server."""
@@ -272,26 +296,28 @@ class PoeBot:
     # Internal handlers
 
     async def handle_report_feedback(
-        self, feedback_request: ReportFeedbackRequest
+        self, feedback_request: ReportFeedbackRequest, context: RequestContext
     ) -> JSONResponse:
-        await self.on_feedback(feedback_request)
+        await self.on_feedback_with_context(feedback_request, context)
         return JSONResponse({})
 
     async def handle_report_error(
-        self, error_request: ReportErrorRequest
+        self, error_request: ReportErrorRequest, context: RequestContext
     ) -> JSONResponse:
-        await self.on_error(error_request)
+        await self.on_error_with_context(error_request, context)
         return JSONResponse({})
 
-    async def handle_settings(self, settings_request: SettingsRequest) -> JSONResponse:
-        settings = await self.get_settings(settings_request)
+    async def handle_settings(
+        self, settings_request: SettingsRequest, context: RequestContext
+    ) -> JSONResponse:
+        settings = await self.get_settings_with_context(settings_request, context)
         return JSONResponse(settings.dict())
 
     async def handle_query(
-        self, request: QueryRequest
+        self, request: QueryRequest, context: RequestContext
     ) -> AsyncIterable[ServerSentEvent]:
         try:
-            async for event in self.get_response(request):
+            async for event in self.get_response_with_context(request, context):
                 if isinstance(event, ServerSentEvent):
                     yield event
                 elif isinstance(event, ErrorResponse):
@@ -420,18 +446,24 @@ def make_app(
                             "access_key": auth_key or "<missing>",
                             "api_key": auth_key or "<missing>",
                         }
-                    )
+                    ),
+                    RequestContext(http_request=request),
                 )
             )
         elif request_body["type"] == "settings":
-            return await bot.handle_settings(SettingsRequest.parse_obj(request_body))
+            return await bot.handle_settings(
+                SettingsRequest.parse_obj(request_body),
+                RequestContext(http_request=request),
+            )
         elif request_body["type"] == "report_feedback":
             return await bot.handle_report_feedback(
-                ReportFeedbackRequest.parse_obj(request_body)
+                ReportFeedbackRequest.parse_obj(request_body),
+                RequestContext(http_request=request),
             )
         elif request_body["type"] == "report_error":
             return await bot.handle_report_error(
-                ReportErrorRequest.parse_obj(request_body)
+                ReportErrorRequest.parse_obj(request_body),
+                RequestContext(http_request=request),
             )
         else:
             raise HTTPException(status_code=501, detail="Unsupported request type")

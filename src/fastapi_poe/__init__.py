@@ -18,6 +18,7 @@ __all__ = [
     "ErrorResponse",
     "MetaResponse",
     "ToolDefinition",
+    "RequestContext",
 ]
 
 from .base import PoeBot, make_app, run
@@ -37,6 +38,7 @@ from .types import (
     QueryRequest,
     ReportErrorRequest,
     ReportFeedbackRequest,
+    RequestContext,
     SettingsRequest,
     SettingsResponse,
     ToolDefinition,
