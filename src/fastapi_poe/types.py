@@ -43,7 +43,7 @@ class BaseRequest(BaseModel):
 
     version: str
     type: Literal["query", "settings", "report_feedback", "report_error"]
-    http_request: Request
+    http_request: Optional[Request] = None
 
 
 class QueryRequest(BaseRequest):
