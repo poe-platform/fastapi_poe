@@ -35,15 +35,18 @@ class ProtocolMessage(BaseModel):
     attachments: List[Attachment] = Field(default_factory=list)
 
 
-class BaseRequest(BaseModel):
-    """Common data for all requests."""
-
+class RequestContext(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
+    http_request: Request
+
+
+class BaseRequest(BaseModel):
+    """Common data for all requests."""
+
     version: str
     type: Literal["query", "settings", "report_feedback", "report_error"]
-    http_request: Optional[Request] = None
 
 
 class QueryRequest(BaseRequest):
