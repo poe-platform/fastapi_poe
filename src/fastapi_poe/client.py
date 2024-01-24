@@ -133,7 +133,9 @@ class _BotContext:
         message_id = request.message_id
         event_count = 0
         error_reported = False
-        payload = request.model_dump()
+        # http_request is not JSON-serializable and isn't relevant for sending
+        # onwards
+        payload = request.model_dump(exclude={"http_request"})
         payload["tools"] = [tool.model_dump() for tool in tools]
         payload["tool_calls"] = [tool_call.model_dump() for tool_call in tool_calls]
         payload["tool_results"] = [
