@@ -78,8 +78,9 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         return response
 
 
-async def http_exception_handler(request: Request, ex: Exception) -> None:
+async def http_exception_handler(request: Request, ex: Exception) -> Response:
     logger.error(ex)
+    return Response(status_code=500, content="Internal server error")
 
 
 http_bearer = HTTPBearer()
