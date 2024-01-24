@@ -6,7 +6,7 @@ import logging
 import os
 import sys
 import warnings
-from typing import AsyncIterable, BinaryIO, Dict, Optional, Union
+from typing import AsyncIterable, Awaitable, BinaryIO, Callable, Dict, Optional, Union
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
@@ -15,6 +15,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import Message
 
 from fastapi_poe.types import (
     AttachmentUploadResponse,
@@ -43,15 +44,17 @@ class AttachmentUploadError(Exception):
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):
-    async def set_body(self, request: Request):
+    async def set_body(self, request: Request) -> None:
         receive_ = await request._receive()
 
-        async def receive():
+        async def receive() -> Message:
             return receive_
 
         request._receive = receive
 
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         logger.info(f"Request: {request.method} {request.url}")
         try:
             # Per https://github.com/tiangolo/fastapi/issues/394#issuecomment-927272627
@@ -75,7 +78,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         return response
 
 
-async def http_exception_handler(request, ex):
+async def http_exception_handler(request: Request, ex: Exception) -> None:
     logger.error(ex)
 
 
@@ -139,7 +142,7 @@ class PoeBot:
         logger.error(f"Error from Poe server: {error_request}")
 
     # Helpers for generating responses
-    def __init__(self):
+    def __init__(self) -> None:
         self._pending_file_attachment_tasks = {}
 
     async def post_message_attachment(
@@ -232,7 +235,9 @@ class PoeBot:
                 logger.error("An HTTP error occurred when attempting to attach file")
                 raise
 
-    async def _process_pending_attachment_requests(self, message_id):
+    async def _process_pending_attachment_requests(
+        self, message_id: Identifier
+    ) -> None:
         try:
             await asyncio.gather(
                 *self._pending_file_attachment_tasks.pop(message_id, [])
@@ -434,7 +439,7 @@ def make_app(
         )
 
     @app.post("/")
-    async def poe_post(request: Request, dict=Depends(auth_user)) -> Response:
+    async def poe_post(request: Request, dict: object = Depends(auth_user)) -> Response:
         request_body = await request.json()
         request_body["http_request"] = request
         if request_body["type"] == "query":

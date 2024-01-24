@@ -29,7 +29,7 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/quora/poe-protocol"
+"Homepage" = "https://developer.poe.com/"
 
 [tool.pyright]
 pythonVersion = "3.7"
@@ -38,10 +38,23 @@ pythonVersion = "3.7"
 target-version = ['py37']
 skip-magic-trailing-comma = true
 
-[tool.pycln]
-all = true
+[tool.ruff]
+select = [
+  "F",
+  "E",
+  "I",  # import sorting
+  "ANN",  # type annotations for everything
+  "C4",  # flake8-comprehensions
+  "B",  # bugbear
+  "SIM",  # simplify
+  "UP",  # pyupgrade
+]
 
-[tool.isort]
-profile = "black"
-combine_as_imports = true
-skip_gitignore = true
+ignore = [
+  "B008",  # do not perform function calls in argument defaults
+  "ANN101",  # missing type annotation for self in method
+  "ANN102",  # missing type annotation for cls in classmethod
+]
+
+line-length = 100
+target-version = "py37"

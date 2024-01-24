@@ -17,8 +17,6 @@ import httpx_sse
 from .types import (
     ContentType,
     Identifier,
-    MetaResponse as MetaMessage,
-    PartialResponse as BotMessage,
     ProtocolMessage,
     QueryRequest,
     SettingsResponse,
@@ -26,6 +24,8 @@ from .types import (
     ToolDefinition,
     ToolResultDefinition,
 )
+from .types import MetaResponse as MetaMessage
+from .types import PartialResponse as BotMessage
 
 PROTOCOL_VERSION = "1.0"
 MESSAGE_LENGTH_LIMIT = 10_000
@@ -274,7 +274,7 @@ class _BotContext:
                 {"data": data, "message_id": message_id},
             )
             # If they are returning invalid JSON, retrying immediately probably won't help
-            raise BotErrorNoRetry(f"Invalid JSON in {context!r} event")
+            raise BotErrorNoRetry(f"Invalid JSON in {context!r} event") from None
         if not isinstance(parsed, dict):
             await self.report_error(
                 f"Expected JSON dict in {context!r} event",

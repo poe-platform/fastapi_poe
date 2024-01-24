@@ -34,8 +34,16 @@ jobs:
           python -m pip install . pytest
 
       - uses: jakebailey/pyright-action@v1
+
+  ruff:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: chartboost/ruff-action@v1
         with:
-          verify-types: fastapi_poe
+          version: 0.1.14
 
   tests:
     name: unit tests
