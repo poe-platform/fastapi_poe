@@ -1,10 +1,9 @@
 import pydantic
 import pytest
-
 from fastapi_poe.types import PartialResponse
 
 
-def test_extra_attrs():
+def test_extra_attrs() -> None:
     with pytest.raises(pydantic.ValidationError):
         PartialResponse(text="hi", replaceResponse=True)  # type: ignore
 

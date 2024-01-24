@@ -29,7 +29,7 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/quora/poe-protocol"
+"Homepage" = "https://developer.poe.com/"
 
 [tool.pyright]
 pythonVersion = "3.7"
@@ -38,10 +38,42 @@ pythonVersion = "3.7"
 target-version = ['py37']
 skip-magic-trailing-comma = true
 
-[tool.pycln]
-all = true
+[tool.ruff]
+select = [
+  "F",
+  "E",
+  "I",  # import sorting
+  "ANN",  # type annotations for everything
+  "C4",  # flake8-comprehensions
+  "B",  # bugbear
+  "SIM",  # simplify
+  "UP",  # pyupgrade
+  "PIE810",  # startswith/endswith with a tuple
+  "SIM101",  # mergeable isinstance() calls
+  "SIM201",  # "not ... == ..." -> "... != ..."
+  "SIM202",  # "not ... != ..." -> "... == ..."
+  "C400",  # unnecessary list() calls
+  "C401",  # unnecessary set() calls
+  "C402",  # unnecessary dict() calls
+  "C403",  # unnecessary listcomp within set() call
+  "C404",  # unnecessary listcomp within dict() call
+  "C405",  # use set literals
+  "C406",  # use dict literals
+  "C409",  # tuple() calls that can be replaced with literals
+  "C410",  # list() calls that can be replaced with literals
+  "C411",  # list() calls with genexps that can be replaced with listcomps
+  "C413",  # unnecessary list() calls around sorted()
+  "C414",  # unnecessary list() calls inside sorted()
+  "C417",  # unnecessary map() calls that can be replaced with listcomps/genexps
+  "C418",  # unnecessary dict() calls that can be replaced with literals
+  "PERF101",  # unnecessary list() calls that can be replaced with literals
+]
 
-[tool.isort]
-profile = "black"
-combine_as_imports = true
-skip_gitignore = true
+ignore = [
+  "B008",  # do not perform function calls in argument defaults
+  "ANN101",  # missing type annotation for self in method
+  "ANN102",  # missing type annotation for cls in classmethod
+]
+
+line-length = 100
+target-version = "py37"
