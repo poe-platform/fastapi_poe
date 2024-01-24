@@ -224,8 +224,9 @@ class PoeBot:
                 response = await client.send(request)
 
                 if response.status_code != 200:
+                    error_pieces = [piece async for piece in response.aiter_text()]
                     raise AttachmentUploadError(
-                        f"{response.status_code}: {response.reason_phrase}"
+                        f"{response.status_code} {response.reason_phrase}: {''.join(error_pieces)}"
                     )
 
                 return AttachmentUploadResponse(
