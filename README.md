@@ -23,7 +23,8 @@ if __name__ == "__main__":
 
 Now, run your bot using `python <filename.py>`.
 
-- In a different terminal, run [ngrok](https://ngrok.com/) to make it publicly accessible.
+- In a different terminal, run [ngrok](https://ngrok.com/) to make it publicly
+  accessible.
 - Use the publicly accessible url to integrate your bot with
   [poe](https://poe.com/create_bot?server=1)
 
