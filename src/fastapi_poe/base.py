@@ -200,8 +200,8 @@ class PoeBot:
         else:
             if access_key is None:
                 raise InvalidParameterError(
-                    "access_key parameter is required if bot is not" +
-                    " provided with an access_key when make_app is called."
+                    "access_key parameter is required if bot is not"
+                    + " provided with an access_key when make_app is called."
                 )
             attachment_access_key = access_key
         url = "https://www.quora.com/poe_api/file_attachment_3RD_PARTY_POST"
