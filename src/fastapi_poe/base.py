@@ -150,9 +150,9 @@ class PoeBot:
 
     async def post_message_attachment(
         self,
-        access_key: str,
         message_id: Identifier,
         *,
+        access_key: Optional[str] = None,
         download_url: Optional[str] = None,
         file_data: Optional[Union[bytes, BinaryIO]] = None,
         filename: Optional[str] = None,
@@ -182,20 +182,32 @@ class PoeBot:
 
     async def _make_file_attachment_request(
         self,
-        access_key: str,
         message_id: Identifier,
         *,
+        access_key: Optional[str] = None,
         download_url: Optional[str] = None,
         file_data: Optional[Union[bytes, BinaryIO]] = None,
         filename: Optional[str] = None,
         content_type: Optional[str] = None,
         is_inline: bool = False,
     ) -> AttachmentUploadResponse:
+        if self.access_key:
+            if access_key:
+                raise InvalidParameterError(
+                    "Bot already has an access key, access_key parameter is not needed."
+                )
+            attachment_access_key = self.access_key
+        else:
+            if access_key is None:
+                raise InvalidParameterError(
+                    "access_key parameter is required if bot is not provided with an access_key when make_app is called."
+                )
+            attachment_access_key = access_key
         url = "https://www.quora.com/poe_api/file_attachment_3RD_PARTY_POST"
 
         async with httpx.AsyncClient(timeout=120) as client:
             try:
-                headers = {"Authorization": f"{access_key}"}
+                headers = {"Authorization": f"{attachment_access_key}"}
                 if download_url:
                     if file_data or filename:
                         raise InvalidParameterError(
