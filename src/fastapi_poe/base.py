@@ -17,7 +17,6 @@ from typing import (
     Optional,
     Sequence,
     Union,
-    overload,
 )
 
 import httpx
@@ -28,7 +27,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import Message
-from typing_extensions import deprecated
+from typing_extensions import deprecated, overload
 
 from fastapi_poe.types import (
     AttachmentUploadResponse,
@@ -150,6 +149,7 @@ class PoeBot:
     def __post_init__(self) -> None:
         self._pending_file_attachment_tasks = {}
 
+    # This overload leaves access_key as the first argument, but is deprecated.
     @overload
     @deprecated(
         "The access_key parameter is deprecated. "
@@ -167,6 +167,7 @@ class PoeBot:
         is_inline: bool = False,
     ) -> AttachmentUploadResponse: ...
 
+    # This overload requires all parameters to be passed as keywords
     @overload
     async def post_message_attachment(
         self,
@@ -227,10 +228,14 @@ class PoeBot:
     ) -> AttachmentUploadResponse:
         if self.access_key:
             if access_key:
-                raise InvalidParameterError(
-                    "Bot already has an access key, access_key parameter is not needed."
+                warnings.warn(
+                    "Bot already has an access key, access_key parameter is not needed.",
+                    DeprecationWarning,
+                    stacklevel=2,
                 )
-            attachment_access_key = self.access_key
+                attachment_access_key = access_key
+            else:
+                attachment_access_key = self.access_key
         else:
             if access_key is None:
                 raise InvalidParameterError(
