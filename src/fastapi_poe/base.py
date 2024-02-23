@@ -17,6 +17,7 @@ from typing import (
     Optional,
     Sequence,
     Union,
+    overload,
 )
 
 import httpx
@@ -27,6 +28,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import Message
+from typing_extensions import deprecated
 
 from fastapi_poe.types import (
     AttachmentUploadResponse,
@@ -148,17 +150,49 @@ class PoeBot:
     def __post_init__(self) -> None:
         self._pending_file_attachment_tasks = {}
 
+    @overload
+    @deprecated(
+        "The access_key parameter is deprecated. "
+        "Set the access_key when creating the Bot object instead."
+    )
     async def post_message_attachment(
         self,
+        access_key: str,
         message_id: Identifier,
         *,
+        download_url: Optional[str] = None,
+        file_data: Optional[Union[bytes, BinaryIO]] = None,
+        filename: Optional[str] = None,
+        content_type: Optional[str] = None,
+        is_inline: bool = False,
+    ) -> AttachmentUploadResponse: ...
+
+    @overload
+    async def post_message_attachment(
+        self,
+        *,
+        message_id: Identifier,
+        download_url: Optional[str] = None,
+        file_data: Optional[Union[bytes, BinaryIO]] = None,
+        filename: Optional[str] = None,
+        content_type: Optional[str] = None,
+        is_inline: bool = False,
+    ) -> AttachmentUploadResponse: ...
+
+    async def post_message_attachment(
+        self,
         access_key: Optional[str] = None,
+        message_id: Optional[Identifier] = None,
+        *,
         download_url: Optional[str] = None,
         file_data: Optional[Union[bytes, BinaryIO]] = None,
         filename: Optional[str] = None,
         content_type: Optional[str] = None,
         is_inline: bool = False,
     ) -> AttachmentUploadResponse:
+        if message_id is None:
+            raise InvalidParameterError("message_id parameter is required")
+
         task = asyncio.create_task(
             self._make_file_attachment_request(
                 access_key=access_key,
