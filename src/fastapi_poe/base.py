@@ -27,6 +27,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import Message
+from typing_extensions import deprecated, overload
 
 from fastapi_poe.types import (
     AttachmentUploadResponse,
@@ -148,6 +149,12 @@ class PoeBot:
     def __post_init__(self) -> None:
         self._pending_file_attachment_tasks = {}
 
+    # This overload leaves access_key as the first argument, but is deprecated.
+    @overload
+    @deprecated(
+        "The access_key parameter is deprecated. "
+        "Set the access_key when creating the Bot object instead."
+    )
     async def post_message_attachment(
         self,
         access_key: str,
@@ -158,7 +165,35 @@ class PoeBot:
         filename: Optional[str] = None,
         content_type: Optional[str] = None,
         is_inline: bool = False,
+    ) -> AttachmentUploadResponse: ...
+
+    # This overload requires all parameters to be passed as keywords
+    @overload
+    async def post_message_attachment(
+        self,
+        *,
+        message_id: Identifier,
+        download_url: Optional[str] = None,
+        file_data: Optional[Union[bytes, BinaryIO]] = None,
+        filename: Optional[str] = None,
+        content_type: Optional[str] = None,
+        is_inline: bool = False,
+    ) -> AttachmentUploadResponse: ...
+
+    async def post_message_attachment(
+        self,
+        access_key: Optional[str] = None,
+        message_id: Optional[Identifier] = None,
+        *,
+        download_url: Optional[str] = None,
+        file_data: Optional[Union[bytes, BinaryIO]] = None,
+        filename: Optional[str] = None,
+        content_type: Optional[str] = None,
+        is_inline: bool = False,
     ) -> AttachmentUploadResponse:
+        if message_id is None:
+            raise InvalidParameterError("message_id parameter is required")
+
         task = asyncio.create_task(
             self._make_file_attachment_request(
                 access_key=access_key,
@@ -182,20 +217,37 @@ class PoeBot:
 
     async def _make_file_attachment_request(
         self,
-        access_key: str,
         message_id: Identifier,
         *,
+        access_key: Optional[str] = None,
         download_url: Optional[str] = None,
         file_data: Optional[Union[bytes, BinaryIO]] = None,
         filename: Optional[str] = None,
         content_type: Optional[str] = None,
         is_inline: bool = False,
     ) -> AttachmentUploadResponse:
+        if self.access_key:
+            if access_key:
+                warnings.warn(
+                    "Bot already has an access key, access_key parameter is not needed.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                attachment_access_key = access_key
+            else:
+                attachment_access_key = self.access_key
+        else:
+            if access_key is None:
+                raise InvalidParameterError(
+                    "access_key parameter is required if bot is not"
+                    + " provided with an access_key when make_app is called."
+                )
+            attachment_access_key = access_key
         url = "https://www.quora.com/poe_api/file_attachment_3RD_PARTY_POST"
 
         async with httpx.AsyncClient(timeout=120) as client:
             try:
-                headers = {"Authorization": f"{access_key}"}
+                headers = {"Authorization": f"{attachment_access_key}"}
                 if download_url:
                     if file_data or filename:
                         raise InvalidParameterError(
