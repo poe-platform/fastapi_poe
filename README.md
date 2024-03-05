@@ -1,8 +1,7 @@
 # fastapi_poe
 
 An implementation of the
-[Poe protocol](https://developer.poe.com/server-bots/poe-protocol-specification) using
-FastAPI.
+[Poe protocol](https://creator.poe.com/docs/poe-protocol-specification) using FastAPI.
 
 ### Write your own bot
 
