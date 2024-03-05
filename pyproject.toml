@@ -29,7 +29,7 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://developer.poe.com/"
+"Homepage" = "https://creator.poe.com/"
 
 [tool.pyright]
 pythonVersion = "3.7"

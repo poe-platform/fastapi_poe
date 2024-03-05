@@ -1,7 +1,7 @@
 """
 
 Client for talking to other Poe bots through the Poe bot query API.
-For more details, see: https://developer.poe.com/server-bots/accessing-other-bots-on-poe
+For more details, see: https://creator.poe.com/docs/accessing-other-bots-on-poe
 
 """
 
