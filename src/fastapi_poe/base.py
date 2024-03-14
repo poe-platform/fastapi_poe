@@ -537,9 +537,11 @@ def make_app(
     *,
     api_key: str = "",
     allow_without_key: bool = False,
+    app: Optional[FastAPI] = None,
 ) -> FastAPI:
     """Create an app object. Arguments are as for run()."""
-    app = FastAPI()
+    if app is None:
+        app = FastAPI()
     app.add_exception_handler(RequestValidationError, http_exception_handler)
 
     if isinstance(bot, PoeBot):
@@ -592,6 +594,7 @@ def run(
     *,
     api_key: str = "",
     allow_without_key: bool = False,
+    app: Optional[FastAPI] = None,
 ) -> None:
     """
     Run a Poe bot server using FastAPI.
@@ -606,11 +609,17 @@ def run(
     :param allow_without_key: If True, the server will start even if no access key
     is provided. Requests will not be checked against any key. If an access key
     is provided, it is still checked.
-
+    :param app: A FastAPI app instance. If provided, app will be configured with the
+    provided bots, access keys, and other settings. If not provided, a new FastAPI
+    application instance will be created and configured.
     """
 
     app = make_app(
-        bot, access_key=access_key, api_key=api_key, allow_without_key=allow_without_key
+        bot,
+        access_key=access_key,
+        api_key=api_key,
+        allow_without_key=allow_without_key,
+        app=app,
     )
 
     parser = argparse.ArgumentParser("FastAPI sample Poe bot server")
