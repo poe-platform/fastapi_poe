@@ -126,20 +126,23 @@ class _BotContext:
         self,
         *,
         request: QueryRequest,
-        tools: List[ToolDefinition],
-        tool_calls: List[ToolCallDefinition],
-        tool_results: List[ToolResultDefinition],
+        tools: Optional[List[ToolDefinition]],
+        tool_calls: Optional[List[ToolCallDefinition]],
+        tool_results: Optional[List[ToolResultDefinition]],
     ) -> AsyncGenerator[BotMessage, None]:
         chunks: List[str] = []
         message_id = request.message_id
         event_count = 0
         error_reported = False
         payload = request.model_dump()
-        payload["tools"] = [tool.model_dump() for tool in tools]
-        payload["tool_calls"] = [tool_call.model_dump() for tool_call in tool_calls]
-        payload["tool_results"] = [
-            tool_result.model_dump() for tool_result in tool_results
-        ]
+        if tools is not None:
+            payload["tools"] = [tool.model_dump() for tool in tools]
+        if tool_calls is not None:
+            payload["tool_calls"] = [tool_call.model_dump() for tool_call in tool_calls]
+        if tool_results is not None:
+            payload["tool_results"] = [
+                tool_result.model_dump() for tool_result in tool_results
+            ]
         async with httpx_sse.aconnect_sse(
             self.session, "POST", self.endpoint, headers=self.headers, json=payload
         ) as event_source:
@@ -455,9 +458,9 @@ async def stream_request_base(
             try:
                 async for message in ctx.perform_query_request(
                     request=request,
-                    tools=tools if tools is not None else [],
-                    tool_calls=tool_calls if tool_calls is not None else [],
-                    tool_results=tool_results if tool_results is not None else [],
+                    tools=tools,
+                    tool_calls=tool_calls,
+                    tool_results=tool_results,
                 ):
                     got_response = True
                     yield message
