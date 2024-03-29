@@ -96,8 +96,7 @@ class SettingsResponse(BaseModel):
     introduction_message: str = ""
     expand_text_attachments: bool = True
     enable_image_comprehension: bool = False
-    enforce_author_role_alternation: bool = True
-    
+    enforce_author_role_alternation: bool = False
 
 
 class AttachmentUploadResponse(BaseModel):
