@@ -21,6 +21,7 @@ class Attachment(BaseModel):
     url: str
     content_type: str
     name: str
+    parsed_content: Optional[str] = None
 
 
 class ProtocolMessage(BaseModel):
@@ -93,6 +94,9 @@ class SettingsResponse(BaseModel):
     server_bot_dependencies: Dict[str, int] = Field(default_factory=dict)
     allow_attachments: bool = False
     introduction_message: str = ""
+    expand_text_attachments: bool = True
+    enable_image_comprehension: bool = False
+    enforce_author_role_alternation: bool = False
 
 
 class AttachmentUploadResponse(BaseModel):
