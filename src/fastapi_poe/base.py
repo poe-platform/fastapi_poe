@@ -44,6 +44,12 @@ from fastapi_poe.types import (
     SettingsResponse,
 )
 
+from fastapi_poe.templates import (
+    IMAGE_VISION_ATTACHMENT_TEMPLATE, 
+    TEXT_ATTACHMENT_TEMPLATE, 
+    URL_ATTACHMENT_TEMPLATE
+)
+
 logger = logging.getLogger("uvicorn.default")
 
 
@@ -102,6 +108,7 @@ http_bearer = HTTPBearer()
 class PoeBot:
     path: str = "/"  # Path where this bot will be exposed
     access_key: Optional[str] = None  # Access key for this bot
+    concat_attachments_to_message: bool = True # attachment content will be concatenated to message
 
     # Override these for your bot
 
@@ -302,6 +309,38 @@ class PoeBot:
             logger.error("Error processing pending attachment requests")
             raise
 
+    def concat_attachment_content_to_message_body(
+        self, query_request: QueryRequest
+    ) -> QueryRequest:
+        """Concat received attachment file content into message content body."""
+        last_message = query_request.query[-1]
+        concatenated_content = last_message.content
+        for attachment in last_message.attachments:
+            if attachment.parsed_content:
+                if attachment.content_type == "text/html":
+                    url_attachment_content = URL_ATTACHMENT_TEMPLATE.format(
+                        attachment_name=attachment.name,
+                        content=attachment.parsed_content,
+                    )
+                    concatenated_content = f"{concatenated_content}\n\n{url_attachment_content}"
+                elif "text" in attachment.content_type:
+                    text_attachment_content = TEXT_ATTACHMENT_TEMPLATE.format(
+                        attachment_name=attachment.name,
+                        attachment_parsed_content=attachment.parsed_content,
+                    )
+                    concatenated_content = f"{concatenated_content}\n\n{text_attachment_content}"
+                elif "image" in attachment.content_type:
+                    parsed_content_filename = attachment.parsed_content.split("***")[0]
+                    parsed_content_text = attachment.parsed_content.split("***")[1]
+                    image_attachment_content = IMAGE_VISION_ATTACHMENT_TEMPLATE.format(
+                        filename=parsed_content_filename,
+                        parsed_image_description=parsed_content_text,
+                    )
+                    concatenated_content = f"{concatenated_content}\n\n{image_attachment_content}"
+        modified_last_message = last_message.model_copy(update={"content": concatenated_content})
+        modified_query = query_request.model_copy(update={"query": query_request.query[:-1] + [modified_last_message]})
+        return modified_query
+
     @staticmethod
     def text_event(text: str) -> ServerSentEvent:
         return ServerSentEvent(data=json.dumps({"text": text}), event="text")
@@ -378,6 +417,8 @@ class PoeBot:
         self, request: QueryRequest, context: RequestContext
     ) -> AsyncIterable[ServerSentEvent]:
         try:
+            if self.concat_attachments_to_message:
+                request = self.concat_attachment_content_to_message_body(query_request=request)
             async for event in self.get_response_with_context(request, context):
                 if isinstance(event, ServerSentEvent):
                     yield event
