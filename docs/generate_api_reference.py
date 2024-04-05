@@ -10,7 +10,8 @@ import fastapi_poe
 INITIAL_TEXT = """
 
 The following it the API reference for the \
-[fastapi_poe](https://github.com/poe-platform/fastapi_poe) client library.
+[fastapi_poe](https://github.com/poe-platform/fastapi_poe) client library. The reference assumes \
+that you used `import fastapi as fp`.
 
 """
 
@@ -78,7 +79,7 @@ def generate_documentation(
 
         for item in documented_items:
             item_data = data_dict[item]
-            f.write(f"## `fastapi_poe.{item_data.name}`\n\n")
+            f.write(f"## `fp.{item_data.name}`\n\n")
             f.write(f"{item_data.docstring}\n\n")
             for child in item_data.children:
                 if not child.docstring:

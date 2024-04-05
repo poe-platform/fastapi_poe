@@ -1,8 +1,8 @@
 
 
-The following it the API reference for the [fastapi_poe](https://github.com/poe-platform/fastapi_poe) client library.
+The following it the API reference for the [fastapi_poe](https://github.com/poe-platform/fastapi_poe) client library. The reference assumes that you used `import fastapi as fp`.
 
-## `fastapi_poe.PoeBot`
+## `fp.PoeBot`
 
 The class that you use to define your bot behavior. Once you define your PoeBot class, you
 pass it to `make_app` to create a FastAPI app that serves your bot.
@@ -81,7 +81,7 @@ manually if needed.
 
 
 
-## `fastapi_poe.make_app`
+## `fp.make_app`
 
 Create an app object for your bot(s).
 
@@ -102,14 +102,14 @@ created and configured.
 
 
 
-## `fastapi_poe.run`
+## `fp.run`
 
 Serve a poe bot using a FastAPI app. This function should be used when you are running the
 bot locally. The arguments are the same as they are for `make_app`.
 
 
 
-## `fastapi_poe.stream_request`
+## `fp.stream_request`
 
 The Entry point for the Bot Query API. This API allows you to use other bots on Poe for
 inference in response to a user message. For more details, checkout:
@@ -125,7 +125,7 @@ compute points will be charged on the account corresponding to the `api_key`.
 
 
 
-## `fastapi_poe.get_bot_response`
+## `fp.get_bot_response`
 
 Use this function to invoke another Poe bot from your shell.
 #### Parameters:
@@ -135,7 +135,7 @@ Use this function to invoke another Poe bot from your shell.
 
 
 
-## `fastapi_poe.get_final_response`
+## `fp.get_final_response`
 
 A helper function for the bot query API that waits for all the tokens and concatenates the full
 response before returning.
@@ -150,7 +150,7 @@ compute points will be charged on the account corresponding to the `api_key`.
 
 
 
-## `fastapi_poe.PartialResponse`
+## `fp.PartialResponse`
 
 Representation of a (possibly partial) response from a bot. Yield this in
 `PoeBot.get_response` or `PoeBot.get_response_with_context` to communicate your response to Poe.
@@ -168,7 +168,7 @@ to the user and replace it with the provided text value.
 
 
 
-## `fastapi_poe.ErrorResponse`
+## `fp.ErrorResponse`
 
 Similar to `PartialResponse`. Yield this to communicate errors from your bot.
 
@@ -178,7 +178,7 @@ Similar to `PartialResponse`. Yield this to communicate errors from your bot.
 
 
 
-## `fastapi_poe.MetaResponse`
+## `fp.MetaResponse`
 
 Similar to `Partial Response`. Yield this to communicate `meta` events from server bots.
 
