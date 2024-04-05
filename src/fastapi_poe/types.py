@@ -104,7 +104,25 @@ class AttachmentUploadResponse(BaseModel):
 
 
 class PartialResponse(BaseModel):
-    """Representation of a (possibly partial) response from a bot."""
+    """
+
+    Representation of a (possibly partial) response from a bot. Yield this in your
+    `PoeBot.get_response` or `PoeBot.get_response_with_context` while setting values
+    appropriately to communicate your response to Poe.
+
+    #### Parameters:
+    - `text`: The actual text you want to display to the user. Note that this solely
+    be the text in the next token as Poe will automatically concatenate all tokens before
+    displaying the response to the user.
+    - `data`: Used to send json data to Poe. This is currently only used in the context
+    of OpenAI function calling.
+    - `is_suggested_reply`: Seting this to true will create a suggested reply with the provided
+    text string.
+    - `is_replace_response`: Setting this to true will clear out the previously displayed text
+    to the user and replace it with the provided str.
+
+
+    """
 
     # These objects are usually instantiated in user code, so we
     # disallow extra fields to prevent mistakes.
@@ -139,16 +157,35 @@ class PartialResponse(BaseModel):
 
 
 class ErrorResponse(PartialResponse):
-    """Communicate errors from server bots."""
+    """
+
+    Similar to `PartialResponse`. Yield this to communicate errors from your bot.
+
+    #### Parameters:
+    - `allow_retry`: Whether or not to allow a user to retry on error.
+    - `error_type`: An enum indicating what error to display.
+
+    """
 
     allow_retry: bool = False
     error_type: Optional[ErrorType] = None
 
 
 class MetaResponse(PartialResponse):
-    """Communicate 'meta' events from server bots."""
+    """
 
-    linkify: bool = True
+    Similar to `Partial Response`. Yield this to communicate 'meta' events from server bots.
+
+    #### Parameters:
+    - `suggested_replies`: Whether or not enable suggested replies.
+    - `content_type`: Used to describe the format of the response. The currently supported values
+    are `text/plain` and `text/markdown`.
+    - `refetch_settings`: Used to trigger a settings fetch request from Poe. A more robust way
+    to trigger this is documented at: https://creator.poe.com/docs/updating-bot-settings
+
+    """
+
+    linkify: bool = True  # deprecated
     suggested_replies: bool = True
     content_type: ContentType = "text/markdown"
     refetch_settings: bool = False
