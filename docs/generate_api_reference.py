@@ -1,7 +1,11 @@
 import inspect
 import sys
+import types
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Union
+
+sys.path.append("../src")
+import fastapi_poe
 
 INITIAL_TEXT = """
 
@@ -19,7 +23,7 @@ class DocumentationData:
     children: List = field(default_factory=lambda: [])
 
 
-def _unwrap_func(func_obj):
+def _unwrap_func(func_obj: Union[staticmethod, Callable]) -> Callable:
     """This is to ensure we get the docstring from the actual func and not a decorator."""
     if isinstance(func_obj, staticmethod):
         return _unwrap_func(func_obj.__func__)
@@ -28,7 +32,9 @@ def _unwrap_func(func_obj):
     return func_obj
 
 
-def get_documentation_data(*, module, documented_items) -> Dict[str, DocumentationData]:
+def get_documentation_data(
+    *, module: types.ModuleType, documented_items: List[str]
+) -> Dict[str, DocumentationData]:
     data_dict = {}
     for name, obj in inspect.getmembers(module):
         if (
@@ -58,8 +64,11 @@ def get_documentation_data(*, module, documented_items) -> Dict[str, Documentati
 
 
 def generate_documentation(
-    *, data_dict: Dict[str, DocumentationData], documented_items, output_filename
-):
+    *,
+    data_dict: Dict[str, DocumentationData],
+    documented_items: List[str],
+    output_filename: str,
+) -> None:
     # reset the file first
     with open(output_filename, "w") as f:
         f.write("")
@@ -69,8 +78,7 @@ def generate_documentation(
 
         for item in documented_items:
             item_data = data_dict[item]
-            prefix = "class" if item_data.data_type == "class" else "def"
-            f.write(f"# `{prefix} {item_data.name}`\n\n")
+            f.write(f"## `fastapi_poe.{item_data.name}`\n\n")
             f.write(f"{item_data.docstring}\n\n")
             for child in item_data.children:
                 if not child.docstring:
@@ -79,10 +87,6 @@ def generate_documentation(
                 f.write(f"{child.docstring}\n\n")
             f.write("\n\n")
 
-
-# Usage example
-sys.path.append("../src")
-import fastapi_poe
 
 # Specify the names of classes and functions to document
 documented_items = [

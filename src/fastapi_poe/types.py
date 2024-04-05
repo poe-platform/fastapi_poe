@@ -106,20 +106,19 @@ class AttachmentUploadResponse(BaseModel):
 class PartialResponse(BaseModel):
     """
 
-    Representation of a (possibly partial) response from a bot. Yield this in your
-    `PoeBot.get_response` or `PoeBot.get_response_with_context` while setting values
-    appropriately to communicate your response to Poe.
+    Representation of a (possibly partial) response from a bot. Yield this in
+    `PoeBot.get_response` or `PoeBot.get_response_with_context` to communicate your response to Poe.
 
     #### Parameters:
-    - `text`: The actual text you want to display to the user. Note that this solely
-    be the text in the next token as Poe will automatically concatenate all tokens before
+    - `text`: The actual text you want to display to the user. Note that this should solely
+    be the text in the next token since Poe will automatically concatenate all tokens before
     displaying the response to the user.
-    - `data`: Used to send json data to Poe. This is currently only used in the context
-    of OpenAI function calling.
+    - `data`: Used to send arbitrary json data to Poe. This is currently only used for OpenAI
+    function calling.
     - `is_suggested_reply`: Seting this to true will create a suggested reply with the provided
-    text string.
+    text value.
     - `is_replace_response`: Setting this to true will clear out the previously displayed text
-    to the user and replace it with the provided str.
+    to the user and replace it with the provided text value.
 
 
     """
@@ -174,10 +173,10 @@ class ErrorResponse(PartialResponse):
 class MetaResponse(PartialResponse):
     """
 
-    Similar to `Partial Response`. Yield this to communicate 'meta' events from server bots.
+    Similar to `Partial Response`. Yield this to communicate `meta` events from server bots.
 
     #### Parameters:
-    - `suggested_replies`: Whether or not enable suggested replies.
+    - `suggested_replies`: Whether or not to enable suggested replies.
     - `content_type`: Used to describe the format of the response. The currently supported values
     are `text/plain` and `text/markdown`.
     - `refetch_settings`: Used to trigger a settings fetch request from Poe. A more robust way

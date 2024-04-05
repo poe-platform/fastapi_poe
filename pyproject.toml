@@ -39,7 +39,7 @@ target-version = ['py37']
 skip-magic-trailing-comma = true
 
 [tool.ruff]
-select = [
+lint.select = [
   "F",
   "E",
   "I",  # import sorting
@@ -69,7 +69,7 @@ select = [
   "PERF101",  # unnecessary list() calls that can be replaced with literals
 ]
 
-ignore = [
+lint.ignore = [
   "B008",  # do not perform function calls in argument defaults
   "ANN101",  # missing type annotation for self in method
   "ANN102",  # missing type annotation for cls in classmethod
