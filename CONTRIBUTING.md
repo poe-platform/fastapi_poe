@@ -4,6 +4,12 @@
 - Pull requests should only be merged once all checks pass
 - The repo uses Black for formatting Python code, Prettier for formatting Markdown,
   Pyright for type-checking Python, and a few other tools
+- To generate reference documentation:
+  - Add/update docstrings in the codebase. If you are adding a new class/function, add
+    it's name to `documented_items` in `docs/generate_api_reference.py`
+  - run `cd docs;python generate_api_reference.py`
+  - [Internal only] Copy the contents of `api_reference.md` to the reference page in
+    README.
 - To run the CI checks locally:
   - `pip install pre-commit`
   - `pre-commit run --all` (or `pre-commit install` to install the pre-commit hook)
