@@ -25,11 +25,9 @@ class DocumentationData:
 
 
 def _unwrap_func(func_obj: Union[staticmethod, Callable]) -> Callable:
-    """This is to ensure we get the docstring from the actual func and not a decorator."""
+    """Grab the underlying func_obj."""
     if isinstance(func_obj, staticmethod):
         return _unwrap_func(func_obj.__func__)
-    if hasattr(func_obj, "__wrapped__"):
-        return _unwrap_func(func_obj.__wrapped__)
     return func_obj
 
 
