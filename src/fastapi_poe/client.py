@@ -1,7 +1,7 @@
 """
 
 Client for talking to other Poe bots through the Poe bot query API.
-For more details, see: https://creator.poe.com/docs/accessing-other-bots-on-poe
+For more details, see: https://creator.poe.com/docs/server-bots-functional-guides#accessing-other-bots-on-poe
 
 """
 
@@ -311,7 +311,7 @@ async def stream_request(
 
     The Entry point for the Bot Query API. This API allows you to use other bots on Poe for
     inference in response to a user message. For more details, checkout:
-    https://creator.poe.com/docs/accessing-other-bots-on-poe
+    https://creator.poe.com/docs/server-bots-functional-guides#accessing-other-bots-on-poe
 
     #### Parameters:
     - `request`: A QueryRequest object representing a query from Poe. This object also includes
