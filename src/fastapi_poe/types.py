@@ -180,7 +180,7 @@ class MetaResponse(PartialResponse):
     - `content_type`: Used to describe the format of the response. The currently supported values
     are `text/plain` and `text/markdown`.
     - `refetch_settings`: Used to trigger a settings fetch request from Poe. A more robust way
-    to trigger this is documented at: https://creator.poe.com/docs/updating-bot-settings
+    to trigger this is documented at: https://creator.poe.com/docs/server-bots-functional-guides#updating-bot-settings
 
     """
 

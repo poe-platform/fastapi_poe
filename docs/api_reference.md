@@ -113,7 +113,7 @@ bot locally. The arguments are the same as they are for `make_app`.
 
 The Entry point for the Bot Query API. This API allows you to use other bots on Poe for
 inference in response to a user message. For more details, checkout:
-https://creator.poe.com/docs/accessing-other-bots-on-poe
+https://creator.poe.com/docs/server-bots-functional-guides#accessing-other-bots-on-poe
 
 #### Parameters:
 - `request`: A QueryRequest object representing a query from Poe. This object also includes
@@ -187,4 +187,4 @@ Similar to `Partial Response`. Yield this to communicate `meta` events from serv
 - `content_type`: Used to describe the format of the response. The currently supported values
 are `text/plain` and `text/markdown`.
 - `refetch_settings`: Used to trigger a settings fetch request from Poe. A more robust way
-to trigger this is documented at: https://creator.poe.com/docs/updating-bot-settings
+to trigger this is documented at: https://creator.poe.com/docs/server-bots-functional-guides#updating-bot-settings
