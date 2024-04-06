@@ -8,15 +8,15 @@ The class that you use to define your bot behavior. Once you define your PoeBot 
 pass it to `make_app` to create a FastAPI app that serves your bot.
 
 #### Parameters:
-- `path` (str = "/"): This is the path at which your bot is served. By default, it's
+- `path` (`str = "/"`): This is the path at which your bot is served. By default, it's
 set to "/" but this is something you can adjust. This is especially useful if you want to serve
 multiple bots from one server.
-- `access_key` (Optional[str] = None): This is the access key for your bot and when
+- `access_key (Optional[str] = None`): This is the access key for your bot and when
 provided is used to validate that the requests are coming from a trusted source. This access key
 should be the same one that you provide when integrating your bot with Poe at:
 https://poe.com/create_bot?server=1. You can also set this to None but certain features like
 file output that mandate an `access_key` will not be available for your bot.
-- `concat_attachments_to_message` (bool = True): A flag to decide whether to parse out
+- `concat_attachments_to_message` (`bool = True`): A flag to decide whether to parse out
 content from attachments and concatenate it to the conversation message. This is set to `True`
 by default and we recommend leaving on since it allows your bot to comprehend attachments
 uploaded by users by default.
@@ -25,7 +25,7 @@ uploaded by users by default.
 
 Override this to define your bot's response given a user query.
 #### Parameters:
-- `request` (QueryRequest): an object representing the chat response request from Poe. This
+- `request` (`QueryRequest`): an object representing the chat response request from Poe. This
 will contain information about the chat state among other things.
 
 #### Returns:
@@ -148,6 +148,8 @@ message body.
 
 
 
+---
+
 ## `fp.make_app`
 
 Create an app object for your bot(s).
@@ -173,6 +175,8 @@ FastAPI application instance will be created and configured.
 
 
 
+---
+
 ## `fp.run`
 
 Serve a poe bot using a FastAPI app. This function should be used when you are running the
@@ -181,6 +185,8 @@ bot locally. The parameters are the same as they are for `make_app`.
 #### Returns: `None`
 
 
+
+---
 
 ## `fp.stream_request`
 
@@ -202,6 +208,8 @@ to the ToolDefinitions. This is used for OpenAI function calling.
 
 
 
+---
+
 ## `fp.get_bot_response`
 
 Use this function to invoke another Poe bot from your shell.
@@ -211,6 +219,8 @@ Use this function to invoke another Poe bot from your shell.
 - `api_key` (str): Your Poe API key. This is available at: [poe.com/api_key](https://poe.com/api_key)
 
 
+
+---
 
 ## `fp.get_final_response`
 
@@ -226,6 +236,8 @@ case you are trying to use this function from a script/shell. Note that if an `a
 provided, compute points will be charged on the account corresponding to the `api_key`.
 
 
+
+---
 
 ## `fp.QueryRequest`
 
@@ -246,6 +258,8 @@ on Poe.
 
 
 
+---
+
 ## `fp.ProtocolMessage`
 
 A message as used in the Poe protocol.
@@ -259,6 +273,8 @@ A message as used in the Poe protocol.
 - `attachments` (List[Attachment] = [])
 
 
+
+---
 
 ## `fp.PartialResponse`
 
@@ -278,6 +294,8 @@ displayed text to the user and replace it with the provided text value.
 
 
 
+---
+
 ## `fp.ErrorResponse`
 
 Similar to `PartialResponse`. Yield this to communicate errors from your bot.
@@ -287,6 +305,8 @@ Similar to `PartialResponse`. Yield this to communicate errors from your bot.
 - `error_type` (Optional[ErrorType] = None): An enum indicating what error to display.
 
 
+
+---
 
 ## `fp.MetaResponse`
 
@@ -302,12 +322,16 @@ https://creator.poe.com/docs/server-bots-functional-guides#updating-bot-settings
 
 
 
+---
+
 ## `fp.SettingsRequest`
 
 Request parameters for a settings request. Currently, this contains no fields but this
 might get updated in the future.
 
 
+
+---
 
 ## `fp.SettingsResponse`
 
@@ -329,6 +353,8 @@ Anthropic.
 
 
 
+---
+
 ## `fp.ReportFeedbackRequest`
 
 Request parameters for a report_feedback request.
@@ -340,6 +366,8 @@ Request parameters for a report_feedback request.
 
 
 
+---
+
 ## `fp.ReportErrorRequest`
 
 Request parameters for a report_error request.
@@ -348,6 +376,8 @@ Request parameters for a report_error request.
 - `metadata` (Dict[str, Any])
 
 
+
+---
 
 ## `fp.Attachment`
 
@@ -360,6 +390,8 @@ Attachment included in a protocol message.
 
 
 
+---
+
 ## `fp.MessageFeedback`
 
 Feedback for a message as used in the Poe protocol.
@@ -368,6 +400,8 @@ Feedback for a message as used in the Poe protocol.
 - `reason` (Optional[str])
 
 
+
+---
 
 ## `fp.ToolDefinition`
 
@@ -378,6 +412,8 @@ An object representing a tool definition used for OpenAI function calling.
 of what this means.
 
 
+
+---
 
 ## `fp.ToolCallDefinition`
 
@@ -390,6 +426,8 @@ OpenAI function calling.
 of what this means.
 
 
+
+---
 
 ## `fp.ToolResultDefinition`
 
