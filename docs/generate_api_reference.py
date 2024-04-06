@@ -86,7 +86,12 @@ def generate_documentation(
     with open(output_filename, "w") as f:
         f.write(INITIAL_TEXT)
 
+        first = True
         for item in documented_items:
+            if first is True:
+                first = False
+            else:
+                f.write("---\n\n")
             item_data = data_dict[item]
             f.write(f"## `fp.{item_data.name}`\n\n")
             f.write(f"{item_data.docstring}\n\n")
