@@ -22,7 +22,7 @@ INITIAL_TEXT = """
 
 The following it the API reference for the \
 [fastapi_poe](https://github.com/poe-platform/fastapi_poe) client library. The reference assumes \
-that you used `import fastapi as fp`.
+that you used `import fastapi_poe as fp`.
 
 """
 
@@ -106,9 +106,20 @@ documented_items = [
     "stream_request",
     "get_bot_response",
     "get_final_response",
+    "QueryRequest",
+    "ProtocolMessage",
     "PartialResponse",
     "ErrorResponse",
     "MetaResponse",
+    "SettingsRequest",
+    "SettingsResponse",
+    "ReportFeedbackRequest",
+    "ReportErrorRequest",
+    "Attachment",
+    "MessageFeedback",
+    "ToolDefinition",
+    "ToolCallDefinition",
+    "ToolResultDefinition",
 ]
 
 data_dict = get_documentation_data(

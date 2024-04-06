@@ -17,8 +17,11 @@ __all__ = [
     "PartialResponse",
     "ErrorResponse",
     "MetaResponse",
-    "ToolDefinition",
     "RequestContext",
+    "ToolDefinition",
+    "ToolCallDefinition",
+    "ToolResultDefinition",
+    "MessageFeedback",
 ]
 
 from .base import PoeBot, make_app, run
@@ -32,6 +35,7 @@ from .client import (
 from .types import (
     Attachment,
     ErrorResponse,
+    MessageFeedback,
     MetaResponse,
     PartialResponse,
     ProtocolMessage,
@@ -41,5 +45,7 @@ from .types import (
     RequestContext,
     SettingsRequest,
     SettingsResponse,
+    ToolCallDefinition,
     ToolDefinition,
+    ToolResultDefinition,
 )
