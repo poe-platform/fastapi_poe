@@ -11,13 +11,31 @@ ErrorType: TypeAlias = Literal["user_message_too_long"]
 
 
 class MessageFeedback(BaseModel):
-    """Feedback for a message as used in the Poe protocol."""
+    """
+
+    Feedback for a message as used in the Poe protocol.
+    #### Fields:
+    - `type` (FeedbackType)
+    - `reason` (Optional[str])
+
+    """
 
     type: FeedbackType
     reason: Optional[str]
 
 
 class Attachment(BaseModel):
+    """
+
+    Attachment included in a protocol message.
+    #### Fields:
+    - `url` (str)
+    - `content_type` (str)
+    - `name`: str
+    - `parsed_content` (Optional[str] = None)
+
+    """
+
     url: str
     content_type: str
     name: str
@@ -25,7 +43,19 @@ class Attachment(BaseModel):
 
 
 class ProtocolMessage(BaseModel):
-    """A message as used in the Poe protocol."""
+    """
+
+    A message as used in the Poe protocol.
+    #### Fields:
+    - `role` (Literal["system", "user", "bot"])
+    - `content` (str)
+    - `content_type` (ContentType="text/markdown")
+    - `timestamp` (int = 0)
+    - `message_id` (str = "")
+    - `feedback` (List[MessageFeedback] = [])
+    - `attachments` (List[Attachment] = [])
+
+    """
 
     role: Literal["system", "user", "bot"]
     content: str
@@ -51,7 +81,24 @@ class BaseRequest(BaseModel):
 
 
 class QueryRequest(BaseRequest):
-    """Request parameters for a query request."""
+    """
+
+    Request parameters for a query request.
+    #### Fields:
+    - `query` (List[ProtocolMessage]): list of message representing the current state of the chat.
+    - `user_id` (Identifier): an anonymized identifier representing a user. This is persistent
+    for subsequent requests from that user.
+    - `conversation_id` (Identifier): an identifier representing a chat. This is
+    persistent for subsequent request for that chat.
+    - `message_id` (Identifier): an identifier representing a message.
+    - `access_key` (str = "<missing>"): contains the access key defined when you created your bot
+    on Poe.
+    - `temperature` (float = 0.7): Temperature input to be used for model inference.
+    - `skip_system_prompt` (bool = False): Whether to use any system prompting or not.
+    - `logit_bias` (Dict[str, float] = {})
+    - `stop_sequences` (List[str] = [])
+
+    """
 
     query: List[ProtocolMessage]
     user_id: Identifier
@@ -67,11 +114,25 @@ class QueryRequest(BaseRequest):
 
 
 class SettingsRequest(BaseRequest):
-    """Request parameters for a settings request."""
+    """
+
+    Request parameters for a settings request. Currently, this contains no fields but this
+    might get updated in the future.
+
+    """
 
 
 class ReportFeedbackRequest(BaseRequest):
-    """Request parameters for a report_feedback request."""
+    """
+
+    Request parameters for a report_feedback request.
+    #### Fields:
+    - `message_id` (Identifier)
+    - `user_id` (Identifier)
+    - `conversation_id` (Identifier)
+    - `feedback_type` (FeedbackType)
+
+    """
 
     message_id: Identifier
     user_id: Identifier
@@ -80,13 +141,40 @@ class ReportFeedbackRequest(BaseRequest):
 
 
 class ReportErrorRequest(BaseRequest):
-    """Request parameters for a report_error request."""
+    """
+
+    Request parameters for a report_error request.
+    #### Fields:
+    - `message` (str)
+    - `metadata` (Dict[str, Any])
+
+    """
 
     message: str
     metadata: Dict[str, Any]
 
 
 class SettingsResponse(BaseModel):
+    """
+
+    An object representing your bot's response to a settings object.
+    #### Fields:
+    - `server_bot_dependencies` (Dict[str, int] = {}): Information about other bots that your bot
+    uses. This is used to facilitate the Bot Query API.
+    - `allow_attachments` (bool = False): Whether to allow users to upload attachments to your bot.
+    - `introduction_message` (str = ""): The introduction message to display to the users of your
+    bot.
+    - `expand_text_attachments` (bool = True): Whether to request parsed content/descriptions from
+    text attachments with the query request. This content is sent through the new parsed_content
+    field in the attachment dictionary. This change makes enabling file uploads much simpler.
+    - `enable_image_comprehension` (bool = False): Similar to `expand_text_attachments` but for
+    images.
+    - `enforce_author_role_alternation` (bool = False): If enabled, Poe will concatenate messages
+    so that they follow role alternation, which is a requirement for certain LLM providers like
+    Anthropic.
+
+    """
+
     model_config = ConfigDict(extra="forbid")
 
     context_clear_window_secs: Optional[int] = None  # deprecated
@@ -109,17 +197,16 @@ class PartialResponse(BaseModel):
     Representation of a (possibly partial) response from a bot. Yield this in
     `PoeBot.get_response` or `PoeBot.get_response_with_context` to communicate your response to Poe.
 
-    #### Parameters:
-    - `text`: The actual text you want to display to the user. Note that this should solely
+    #### Fields:
+    - `text` (str): The actual text you want to display to the user. Note that this should solely
     be the text in the next token since Poe will automatically concatenate all tokens before
     displaying the response to the user.
-    - `data`: Used to send arbitrary json data to Poe. This is currently only used for OpenAI
-    function calling.
-    - `is_suggested_reply`: Seting this to true will create a suggested reply with the provided
-    text value.
-    - `is_replace_response`: Setting this to true will clear out the previously displayed text
-    to the user and replace it with the provided text value.
-
+    - `data` (Optional[Dict[str, Any]]): Used to send arbitrary json data to Poe. This is currently
+    only used for OpenAI function calling.
+    - `is_suggested_reply` (bool = False): Setting this to true will create a suggested reply with
+    the provided text value.
+    - `is_replace_response` (bool = False): Setting this to true will clear out the previously
+    displayed text to the user and replace it with the provided text value.
 
     """
 
@@ -160,9 +247,9 @@ class ErrorResponse(PartialResponse):
 
     Similar to `PartialResponse`. Yield this to communicate errors from your bot.
 
-    #### Parameters:
-    - `allow_retry`: Whether or not to allow a user to retry on error.
-    - `error_type`: An enum indicating what error to display.
+    #### Fields:
+    - `allow_retry` (bool = False): Whether or not to allow a user to retry on error.
+    - `error_type` (Optional[ErrorType] = None): An enum indicating what error to display.
 
     """
 
@@ -175,12 +262,13 @@ class MetaResponse(PartialResponse):
 
     Similar to `Partial Response`. Yield this to communicate `meta` events from server bots.
 
-    #### Parameters:
-    - `suggested_replies`: Whether or not to enable suggested replies.
-    - `content_type`: Used to describe the format of the response. The currently supported values
-    are `text/plain` and `text/markdown`.
-    - `refetch_settings`: Used to trigger a settings fetch request from Poe. A more robust way
-    to trigger this is documented at: https://creator.poe.com/docs/server-bots-functional-guides#updating-bot-settings
+    #### Fields:
+    - `suggested_replies` (bool = False): Whether or not to enable suggested replies.
+    - `content_type` (ContentType = "text/markdown"): Used to describe the format of the response.
+    The currently supported values are `text/plain` and `text/markdown`.
+    - `refetch_settings` (bool = False): Used to trigger a settings fetch request from Poe. A more
+    robust way to trigger this is documented at:
+    https://creator.poe.com/docs/server-bots-functional-guides#updating-bot-settings
 
     """
 
@@ -191,6 +279,16 @@ class MetaResponse(PartialResponse):
 
 
 class ToolDefinition(BaseModel):
+    """
+
+    An object representing a tool definition used for OpenAI function calling.
+    #### Fields:
+    - `type` (str)
+    - `function` (FunctionDefinition): Look at the source code for a detailed description
+    of what this means.
+
+    """
+
     class FunctionDefinition(BaseModel):
         class ParametersDefinition(BaseModel):
             type: str
@@ -206,6 +304,18 @@ class ToolDefinition(BaseModel):
 
 
 class ToolCallDefinition(BaseModel):
+    """
+
+    An object representing a tool call. This is returned as a response by the model when using
+    OpenAI function calling.
+    #### Fields:
+    - `id` (str)
+    - `type` (str)
+    - `function` (FunctionDefinition): Look at the source code for a detailed description
+    of what this means.
+
+    """
+
     class FunctionDefinition(BaseModel):
         name: str
         arguments: str
@@ -216,6 +326,18 @@ class ToolCallDefinition(BaseModel):
 
 
 class ToolResultDefinition(BaseModel):
+    """
+
+    An object representing a function result. This is passed to the model in the last step
+    when using OpenAI function calling.
+    #### Fields:
+    - `role` (str)
+    - `name` (str)
+    - `tool_call_id` (str)
+    - `content` (str)
+
+    """
+
     role: str
     name: str
     tool_call_id: str
