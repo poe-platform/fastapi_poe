@@ -343,7 +343,7 @@ async def stream_request(
             retry_sleep_time=retry_sleep_time,
             base_url=base_url,
         )
-        tool_results = _get_tool_results(
+        tool_results = await _get_tool_results(
             tool_executables=tool_executables, tool_calls=tool_calls
         )
     async for message in stream_request_base(
@@ -364,7 +364,7 @@ async def stream_request(
         yield message
 
 
-def _get_tool_results(
+async def _get_tool_results(
     tool_executables: List[Callable], tool_calls: List[ToolCallDefinition]
 ) -> List[ToolResultDefinition]:
     tool_executables_dict = {
@@ -375,7 +375,11 @@ def _get_tool_results(
         tool_call_id = tool_call.id
         name = tool_call.function.name
         arguments = json.loads(tool_call.function.arguments)
-        content = tool_executables_dict[name](**arguments)
+        _func = tool_executables_dict[name]
+        if asyncio.iscoroutinefunction(_func):
+            content = await _func(**arguments)
+        else:
+            content = _func(**arguments)
         tool_results.append(
             ToolResultDefinition(
                 role="tool",
