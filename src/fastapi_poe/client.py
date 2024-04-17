@@ -377,7 +377,7 @@ async def _get_tool_results(
         name = tool_call.function.name
         arguments = json.loads(tool_call.function.arguments)
         _func = tool_executables_dict[name]
-        if inspect.isawaitable(_func):
+        if inspect.iscoroutinefunction(_func):
             content = await _func(**arguments)
         else:
             content = _func(**arguments)
