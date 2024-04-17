@@ -7,9 +7,9 @@ For more details, see: https://creator.poe.com/docs/server-bots-functional-guide
 
 import asyncio
 import contextlib
+import inspect
 import json
 import warnings
-import inspect
 from dataclasses import dataclass, field
 from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, cast
 
