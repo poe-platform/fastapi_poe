@@ -4,6 +4,8 @@
 - Pull requests should only be merged once all checks pass
 - The repo uses Black for formatting Python code, Prettier for formatting Markdown,
   Pyright for type-checking Python, and a few other tools
+- To generate reference documentation, follow the instructions in
+  docs/generate_api_reference.py
 - To run the CI checks locally:
   - `pip install pre-commit`
   - `pre-commit run --all` (or `pre-commit install` to install the pre-commit hook)

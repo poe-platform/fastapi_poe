@@ -1,7 +1,7 @@
 """
 
 Client for talking to other Poe bots through the Poe bot query API.
-For more details, see: https://creator.poe.com/docs/accessing-other-bots-on-poe
+For more details, see: https://creator.poe.com/docs/server-bots-functional-guides#accessing-other-bots-on-poe
 
 """
 
@@ -307,6 +307,25 @@ async def stream_request(
     retry_sleep_time: float = 0.5,
     base_url: str = "https://api.poe.com/bot/",
 ) -> AsyncGenerator[BotMessage, None]:
+    """
+
+    The Entry point for the Bot Query API. This API allows you to use other bots on Poe for
+    inference in response to a user message. For more details, checkout:
+    https://creator.poe.com/docs/server-bots-functional-guides#accessing-other-bots-on-poe
+
+    #### Parameters:
+    - `request` (`QueryRequest`): A QueryRequest object representing a query from Poe. This object
+    also includes information needed to identify the user for compute point usage.
+    - `bot_name` (`str`): The bot you want to invoke.
+    - `api_key` (`str = ""`): Your Poe API key, available at poe.com/api_key. You will need
+    this in case you are trying to use this function from a script/shell. Note that if an `api_key`
+    is provided, compute points will be charged on the account corresponding to the `api_key`.
+    - tools: (`Optional[List[ToolDefinition]] = None`): An list of ToolDefinition objects describing
+    the functions you have. This is used for OpenAI function calling.
+    - tool_executables: (`Optional[List[Callable]] = None`): An list of functions corresponding
+    to the ToolDefinitions. This is used for OpenAI function calling.
+
+    """
     tool_calls = None
     tool_results = None
     if tools is not None:
@@ -499,6 +518,15 @@ def get_bot_response(
     base_url: str = "https://api.poe.com/bot/",
     session: Optional[httpx.AsyncClient] = None,
 ) -> AsyncGenerator[BotMessage, None]:
+    """
+
+    Use this function to invoke another Poe bot from your shell.
+    #### Parameters:
+    - `messages` (`List[ProtocolMessage]`): A list of messages representing your conversation.
+    - `bot_name` (`str`): The bot that you want to invoke.
+    - `api_key` (`str`): Your Poe API key. This is available at: [poe.com/api_key](https://poe.com/api_key)
+
+    """
     additional_params = {}
     # This is so that we don't have to redefine the default values for these params.
     if temperature is not None:
@@ -542,7 +570,20 @@ async def get_final_response(
     retry_sleep_time: float = 0.5,
     base_url: str = "https://api.poe.com/bot/",
 ) -> str:
-    """Gets the final response from a Poe bot."""
+    """
+
+    A helper function for the bot query API that waits for all the tokens and concatenates the full
+    response before returning.
+
+    #### Parameters:
+    - `request` (`QueryRequest`): A QueryRequest object representing a query from Poe. This object
+    also includes information needed to identify the user for compute point usage.
+    - `bot_name` (`str`): The bot you want to invoke.
+    - `api_key` (`str = ""`): Your Poe API key, available at poe.com/api_key. You will need this in
+    case you are trying to use this function from a script/shell. Note that if an `api_key` is
+    provided, compute points will be charged on the account corresponding to the `api_key`.
+
+    """
     chunks: List[str] = []
     async for message in stream_request(
         request,

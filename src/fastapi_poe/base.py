@@ -105,6 +105,27 @@ http_bearer = HTTPBearer()
 
 @dataclass
 class PoeBot:
+    """
+
+    The class that you use to define your bot behavior. Once you define your PoeBot class, you
+    pass it to `make_app` to create a FastAPI app that serves your bot.
+
+    #### Parameters:
+    - `path` (`str = "/"`): This is the path at which your bot is served. By default, it's
+    set to "/" but this is something you can adjust. This is especially useful if you want to serve
+    multiple bots from one server.
+    - `access_key` (`Optional[str] = None`): This is the access key for your bot and when
+    provided is used to validate that the requests are coming from a trusted source. This access key
+    should be the same one that you provide when integrating your bot with Poe at:
+    https://poe.com/create_bot?server=1. You can also set this to None but certain features like
+    file output that mandate an `access_key` will not be available for your bot.
+    - `concat_attachments_to_message` (`bool = True`): A flag to decide whether to parse out
+    content from attachments and concatenate it to the conversation message. This is set to `True`
+    by default and we recommend leaving on since it allows your bot to comprehend attachments
+    uploaded by users by default.
+
+    """
+
     path: str = "/"  # Path where this bot will be exposed
     access_key: Optional[str] = None  # Access key for this bot
     concat_attachments_to_message: bool = (
@@ -112,46 +133,143 @@ class PoeBot:
     )
 
     # Override these for your bot
+    async def get_response(
+        self, request: QueryRequest
+    ) -> AsyncIterable[Union[PartialResponse, ServerSentEvent]]:
+        """
+
+        Override this to define your bot's response given a user query.
+        #### Parameters:
+        - `request` (`QueryRequest`): an object representing the chat response request from Poe.
+        This will contain information about the chat state among other things.
+
+        #### Returns:
+        - `AsyncIterable[PartialResponse]`: objects representing your
+        response to the Poe servers. This is what gets displayed to the user.
+
+        Example usage:
+        ```python
+        async def get_response(self, request: fp.QueryRequest) -> AsyncIterable[fp.PartialResponse]:
+            last_message = request.query[-1].content
+            yield fp.PartialResponse(text=last_message)
+        ```
+
+        """
+        yield self.text_event("hello")
 
     async def get_response_with_context(
         self, request: QueryRequest, context: RequestContext
     ) -> AsyncIterable[Union[PartialResponse, ServerSentEvent]]:
+        """
+
+        A version of `get_response` that also includes the request context information. By
+        default, this will call `get_response`.
+        #### Parameters:
+        - `request` (`QueryRequest`): an object representing the chat response request from Poe.
+        This will contain information about the chat state among other things.
+        - `context` (`RequestContext`): an object representing the current HTTP request.
+
+        #### Returns:
+        - `AsyncIterable[Union[PartialResponse, ErrorResponse]]`: objects representing your
+        response to the Poe servers. This is what gets displayed to the user.
+
+        """
+        yield self.text_event("hello")
         async for event in self.get_response(request):
             yield event
 
-    async def get_response(
-        self, request: QueryRequest
-    ) -> AsyncIterable[Union[PartialResponse, ServerSentEvent]]:
-        """Override this to return a response to user queries."""
-        yield self.text_event("hello")
+    async def get_settings(self, setting: SettingsRequest) -> SettingsResponse:
+        """
+
+        Override this to define your bot's settings.
+
+        #### Parameters:
+        - `setting` (`SettingsRequest`): An object representing the settings request.
+
+        #### Returns:
+        - `SettingsResponse`: An object representing the settings you want to use for your bot.
+
+        """
+        return SettingsResponse()
 
     async def get_settings_with_context(
         self, setting: SettingsRequest, context: RequestContext
     ) -> SettingsResponse:
+        """
+
+        A version of `get_settings` that also includes the request context information. By
+        default, this will call `get_settings`.
+
+        #### Parameters:
+        - `setting` (`SettingsRequest`): An object representing the settings request.
+        - `context` (`RequestContext`): an object representing the current HTTP request.
+
+        #### Returns:
+        - `SettingsResponse`: An object representing the settings you want to use for your bot.
+
+        """
         settings = await self.get_settings(setting)
         return settings
 
-    async def get_settings(self, setting: SettingsRequest) -> SettingsResponse:
-        """Override this to return non-standard settings."""
-        return SettingsResponse()
+    async def on_feedback(self, feedback_request: ReportFeedbackRequest) -> None:
+        """
+
+        Override this to record feedback from the user.
+        #### Parameters:
+        - `feedback_request` (`ReportFeedbackRequest`): An object representing the Feedback rqeuest
+        from Poe. This is sent out when a user provides feedback on a response on your bot.
+        #### Returns: `None`
+
+        """
+        pass
 
     async def on_feedback_with_context(
         self, feedback_request: ReportFeedbackRequest, context: RequestContext
     ) -> None:
+        """
+
+        A version of `on_feedback` that also includes the request context information. By
+        default, this will call `on_feedback`.
+
+        #### Parameters:
+        - `feedback_request` (`ReportFeedbackRequest`): An object representing a feedback rqeuest
+        from Poe. This is sent out when a user provides feedback on a response on your bot.
+        - `context` (`RequestContext`): an object representing the current HTTP request.
+        #### Returns: `None`
+
+        """
         await self.on_feedback(feedback_request)
 
-    async def on_feedback(self, feedback_request: ReportFeedbackRequest) -> None:
-        """Override this to record feedback from the user."""
-        pass
+    async def on_error(self, error_request: ReportErrorRequest) -> None:
+        """
+
+        Override this to record errors from the Poe server.
+        #### Parameters:
+        - `error_request` (`ReportErrorRequest`): An object representing an error request from Poe.
+        This is sent out when the Poe server runs into an issue processing the response from your
+        bot.
+        #### Returns: `None`
+
+        """
+        logger.error(f"Error from Poe server: {error_request}")
 
     async def on_error_with_context(
         self, error_request: ReportErrorRequest, context: RequestContext
     ) -> None:
-        await self.on_error(error_request)
+        """
 
-    async def on_error(self, error_request: ReportErrorRequest) -> None:
-        """Override this to record errors from the Poe server."""
-        logger.error(f"Error from Poe server: {error_request}")
+        A version of `on_error` that also includes the request context information. By
+        default, this will call `on_error`.
+
+        #### Parameters:
+        - `error_request` (`ReportErrorRequest`): An object representing an error request from Poe.
+        This is sent out when the Poe server runs into an issue processing the response from your
+        bot.
+        - `context` (`RequestContext`): an object representing the current HTTP request.
+        #### Returns: `None`
+
+        """
+        await self.on_error(error_request)
 
     # Helpers for generating responses
     def __post_init__(self) -> None:
@@ -199,6 +317,27 @@ class PoeBot:
         content_type: Optional[str] = None,
         is_inline: bool = False,
     ) -> AttachmentUploadResponse:
+        """
+
+        Used to output an attachment in your bot's response.
+
+        #### Parameters:
+        - `message_id` (`Identifier`): The message id associated with the current QueryRequest
+        object. **Important**: This must be the request that is currently being handled by
+        get_response. Attempting to attach files to previously handled requests will fail.
+        - `access_key` (`str`): The access_key corresponding to your bot. This is needed to ensure
+        that file upload requests are coming from an authorized source.
+        - `download_url` (`Optional[str] = None`): A url to the file to be attached to the message.
+        - `file_data` (`Optional[Union[bytes, BinaryIO]] = None`): The contents of the file to be
+        uploaded. This should be a bytes-like or file object.
+        - `filename` (`Optional[str] = None`): The name of the file to be attached.
+        #### Returns:
+        - `AttachmentUploadResponse`
+
+        **Note**: You need to provide either the `download_url` or both of `file_data` and
+        `filename`.
+
+        """
         if message_id is None:
             raise InvalidParameterError("message_id parameter is required")
 
@@ -313,7 +452,19 @@ class PoeBot:
     def concat_attachment_content_to_message_body(
         self, query_request: QueryRequest
     ) -> QueryRequest:
-        """Concat received attachment file content into message content body."""
+        """
+
+        Concatenate received attachment file content into the message body. This will be called
+        by default if `concat_attachments_to_message` is set to `True` but can also be used
+        manually if needed.
+
+        #### Parameters:
+        - `query_request` (`QueryRequest`): the request object from Poe.
+        #### Returns:
+        - `QueryRequest`: the request object after the attachments are unpacked and added to the
+        message body.
+
+        """
         last_message = query_request.query[-1]
         concatenated_content = last_message.content
         for attachment in last_message.attachments:
@@ -593,7 +744,27 @@ def make_app(
     allow_without_key: bool = False,
     app: Optional[FastAPI] = None,
 ) -> FastAPI:
-    """Create an app object. Arguments are as for run()."""
+    """
+
+    Create an app object for your bot(s).
+
+    #### Parameters:
+    - `bot` (`Union[PoeBot, Sequence[PoeBot]]`): A bot object or a list of bot objects if you want
+    to host multiple bots on one server.
+    - `access_key` (`str = ""`): The access key to use.  If not provided, the server tries to
+    read the POE_ACCESS_KEY environment variable. If that is not set, the server will
+    refuse to start, unless `allow_without_key` is True. If multiple bots are provided,
+    the access key must be provided as part of the bot object.
+    - `allow_without_key` (`bool = False`): If True, the server will start even if no access
+    key is provided. Requests will not be checked against any key. If an access key is provided, it
+    is still checked.
+    - `app` (`Optional[FastAPI] = None`): A FastAPI app instance. If provided, the app will be
+    configured with the provided bots, access keys, and other settings. If not provided, a new
+    FastAPI application instance will be created and configured.
+    #### Returns:
+    - `FastAPI`: A FastAPI app configured to serve your bot when run.
+
+    """
     if app is None:
         app = FastAPI()
     app.add_exception_handler(RequestValidationError, http_exception_handler)
@@ -651,21 +822,12 @@ def run(
     app: Optional[FastAPI] = None,
 ) -> None:
     """
-    Run a Poe bot server using FastAPI.
 
-    :param bot: The bot object or a list of bot objects.
-    :param access_key: The access key to use. If not provided, the server tries to read
-    the POE_ACCESS_KEY environment variable. If that is not set, the server will
-    refuse to start, unless *allow_without_key* is True. If multiple bots are provided,
-    the access key must be provided as part of the bot object.
-    :param api_key: The previous name of access_key. This param is deprecated and will be
-    removed in a future version
-    :param allow_without_key: If True, the server will start even if no access key
-    is provided. Requests will not be checked against any key. If an access key
-    is provided, it is still checked.
-    :param app: A FastAPI app instance. If provided, app will be configured with the
-    provided bots, access keys, and other settings. If not provided, a new FastAPI
-    application instance will be created and configured.
+    Serve a poe bot using a FastAPI app. This function should be used when you are running the
+    bot locally. The parameters are the same as they are for `make_app`.
+
+    #### Returns: `None`
+
     """
 
     app = make_app(
