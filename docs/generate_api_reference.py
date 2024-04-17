@@ -20,7 +20,7 @@ import fastapi_poe
 
 INITIAL_TEXT = """
 
-The following it the API reference for the \
+The following is the API reference for the \
 [fastapi_poe](https://github.com/poe-platform/fastapi_poe) client library. The reference assumes \
 that you used `import fastapi_poe as fp`.
 
