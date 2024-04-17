@@ -173,6 +173,8 @@ class SettingsResponse(BaseModel):
     - `enforce_author_role_alternation` (`bool = False`): If enabled, Poe will concatenate messages
     so that they follow role alternation, which is a requirement for certain LLM providers like
     Anthropic.
+     - `enable_multi_bot_chat_prompting` (`bool = False`): If enabled, Poe will combine previous bot
+     messages if there is a multibot context.
 
     """
 
@@ -186,6 +188,7 @@ class SettingsResponse(BaseModel):
     expand_text_attachments: bool = True
     enable_image_comprehension: bool = False
     enforce_author_role_alternation: bool = False
+    enable_multi_bot_chat_prompting: bool = False
 
 
 class AttachmentUploadResponse(BaseModel):

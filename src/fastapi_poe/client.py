@@ -467,7 +467,7 @@ async def stream_request_base(
 
     async with contextlib.AsyncExitStack() as stack:
         if session is None:
-            session = await stack.enter_async_context(httpx.AsyncClient(timeout=120))
+            session = await stack.enter_async_context(httpx.AsyncClient(timeout=600))
         url = f"{base_url}{bot_name}"
         ctx = _BotContext(
             endpoint=url, api_key=api_key, session=session, on_error=on_error
