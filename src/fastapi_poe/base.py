@@ -174,7 +174,6 @@ class PoeBot:
         response to the Poe servers. This is what gets displayed to the user.
 
         """
-        yield self.text_event("hello")
         async for event in self.get_response(request):
             yield event
 
