@@ -333,7 +333,7 @@ async def stream_request(
         assert tool_executables is not None
         tool_calls = await _get_tool_calls(
             request=request,
-            bot_name=bot_name,
+            bot_name='ChatGPT',
             api_key=api_key,
             tools=tools,
             access_key=access_key,
