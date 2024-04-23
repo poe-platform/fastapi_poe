@@ -193,6 +193,7 @@ class SettingsResponse(BaseModel):
 
 class AttachmentUploadResponse(BaseModel):
     inline_ref: Optional[str]
+    attachment_url: Optional[str]
 
 
 class PartialResponse(BaseModel):
