@@ -111,6 +111,8 @@ class QueryRequest(BaseRequest):
     skip_system_prompt: bool = False
     logit_bias: Dict[str, float] = {}
     stop_sequences: List[str] = []
+    message_creation_time: int = 0
+
 
 
 class SettingsRequest(BaseRequest):
