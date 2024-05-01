@@ -174,7 +174,6 @@ class PoeBot:
         response to the Poe servers. This is what gets displayed to the user.
 
         """
-        yield self.text_event("hello")
         async for event in self.get_response(request):
             yield event
 
@@ -430,8 +429,10 @@ class PoeBot:
                         f"{response.status_code} {response.reason_phrase}: {''.join(error_pieces)}"
                     )
 
+                response_data = response.json()
                 return AttachmentUploadResponse(
-                    inline_ref=response.json().get("inline_ref")
+                    inline_ref=response_data.get("inline_ref"),
+                    attachment_url=response_data.get("attachment_url"),
                 )
 
             except httpx.HTTPError:
