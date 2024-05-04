@@ -41,6 +41,7 @@ from fastapi_poe.types import (
     Identifier,
     MetaResponse,
     PartialResponse,
+    ProtocolMessage,
     QueryRequest,
     ReportErrorRequest,
     ReportFeedbackRequest,
@@ -119,18 +120,22 @@ class PoeBot:
     should be the same one that you provide when integrating your bot with Poe at:
     https://poe.com/create_bot?server=1. You can also set this to None but certain features like
     file output that mandate an `access_key` will not be available for your bot.
-    - `concat_attachments_to_message` (`bool = True`): A flag to decide whether to parse out
-    content from attachments and concatenate it to the conversation message. This is set to `True`
-    by default and we recommend leaving on since it allows your bot to comprehend attachments
+    - `should_insert_attachment_messages` (`bool = True`): A flag to decide whether to parse out
+    content from attachments and insert them as messages into the conversation. This is set to
+    `True`by default and we recommend leaving on since it allows your bot to comprehend attachments
     uploaded by users by default.
+    - `concat_attachments_to_message` (`bool = False`): Deprecated. This was used to concatenate
+    attachment content to the message body. This is now handled by `insert_attachment_messages`.
+    This will be removed in a future release.
 
     """
 
     path: str = "/"  # Path where this bot will be exposed
     access_key: Optional[str] = None  # Access key for this bot
-    concat_attachments_to_message: bool = (
-        True  # attachment content will be concatenated to message
+    should_insert_attachment_messages: bool = (
+        True  # Whether to insert attachment messages into the conversation
     )
+    concat_attachments_to_message: bool = False  # Deprecated
 
     # Override these for your bot
     async def get_response(
@@ -450,6 +455,10 @@ class PoeBot:
             logger.error("Error processing pending attachment requests")
             raise
 
+    @deprecated(
+        "This method is deprecated. Use `insert_attachment_messages` instead."
+        "This method will be removed in a future release."
+    )
     def concat_attachment_content_to_message_body(
         self, query_request: QueryRequest
     ) -> QueryRequest:
@@ -503,6 +512,102 @@ class PoeBot:
             update={"query": query_request.query[:-1] + [modified_last_message]}
         )
         return modified_query
+
+    def insert_attachment_messages(self, query_request: QueryRequest) -> QueryRequest:
+        """
+
+        Insert messages containing the contents of each user attachment right before the last user
+        message. This ensures the bot can consider all relevant information when generating a
+        response. This will be called by default if `should_insert_attachment_messages` is set to
+        `True` but can also be used manually if needed.
+
+        #### Parameters:
+        - `query_request` (`QueryRequest`): the request object from Poe.
+        #### Returns:
+        - `QueryRequest`: the request object after the attachments are unpacked and added to the
+        message body.
+
+        """
+        last_message = query_request.query[-1]
+        text_attachment_messages = []
+        image_attachment_messages = []
+        for attachment in last_message.attachments:
+            if attachment.parsed_content:
+                if attachment.content_type == "text/html":
+                    url_attachment_content = URL_ATTACHMENT_TEMPLATE.format(
+                        attachment_name=attachment.name,
+                        content=attachment.parsed_content,
+                    )
+                    text_attachment_messages.append(
+                        ProtocolMessage(role="user", content=url_attachment_content)
+                    )
+                elif "text" in attachment.content_type:
+                    text_attachment_content = TEXT_ATTACHMENT_TEMPLATE.format(
+                        attachment_name=attachment.name,
+                        attachment_parsed_content=attachment.parsed_content,
+                    )
+                    text_attachment_messages.append(
+                        ProtocolMessage(role="user", content=text_attachment_content)
+                    )
+                elif "image" in attachment.content_type:
+                    parsed_content_filename = attachment.parsed_content.split("***")[0]
+                    parsed_content_text = attachment.parsed_content.split("***")[1]
+                    image_attachment_content = IMAGE_VISION_ATTACHMENT_TEMPLATE.format(
+                        filename=parsed_content_filename,
+                        parsed_image_description=parsed_content_text,
+                    )
+                    image_attachment_messages.append(
+                        ProtocolMessage(role="user", content=image_attachment_content)
+                    )
+        modified_query = query_request.model_copy(
+            update={
+                "query": query_request.query[:-1]
+                + text_attachment_messages
+                + image_attachment_messages
+                + [last_message]
+            }
+        )
+        return modified_query
+
+    def make_prompt_author_role_alternated(
+        self, protocol_messages: Sequence[ProtocolMessage]
+    ) -> Sequence[ProtocolMessage]:
+        """
+
+        Concatenate consecutive messages from the same author into a single message. This is useful
+        for LLMs that require role alternation between user and bot messages.
+
+        #### Parameters:
+        - `protocol_messages` (`Sequence[ProtocolMessage]`): the messages to make alternated.
+        #### Returns:
+        - `Sequence[ProtocolMessage]`: the modified messages.
+
+        """
+        new_messages = []
+
+        for protocol_message in protocol_messages:
+            if new_messages and protocol_message.role == new_messages[-1].role:
+                prev_message = new_messages.pop()
+                new_content = prev_message.content + "\n\n" + protocol_message.content
+
+                new_attachments = []
+                added_attachment_urls = set()
+                for attachment in (
+                    protocol_message.attachments + prev_message.attachments
+                ):
+                    if attachment.url not in added_attachment_urls:
+                        added_attachment_urls.add(attachment.url)
+                        new_attachments.append(attachment)
+
+                new_messages.append(
+                    prev_message.model_copy(
+                        update={"content": new_content, "attachments": new_attachments}
+                    )
+                )
+            else:
+                new_messages.append(protocol_message)
+
+        return new_messages
 
     @staticmethod
     def text_event(text: str) -> ServerSentEvent:
@@ -580,7 +685,15 @@ class PoeBot:
         self, request: QueryRequest, context: RequestContext
     ) -> AsyncIterable[ServerSentEvent]:
         try:
-            if self.concat_attachments_to_message:
+            if self.should_insert_attachment_messages:
+                request = self.insert_attachment_messages(query_request=request)
+            elif self.concat_attachments_to_message:
+                warnings.warn(
+                    "concat_attachments_to_message is deprecated. "
+                    "Use should_insert_attachment_messages instead.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
                 request = self.concat_attachment_content_to_message_body(
                     query_request=request
                 )
