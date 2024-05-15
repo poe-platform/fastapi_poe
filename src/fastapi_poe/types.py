@@ -59,7 +59,7 @@ class ProtocolMessage(BaseModel):
     """
 
     role: Literal["system", "user", "bot"]
-    sender_id: Optional[str]
+    sender_id: Optional[str] = None
     content: str
     content_type: ContentType = "text/markdown"
     timestamp: int = 0
