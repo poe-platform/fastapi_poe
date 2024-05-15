@@ -48,6 +48,7 @@ class ProtocolMessage(BaseModel):
     A message as used in the Poe protocol.
     #### Fields:
     - `role` (`Literal["system", "user", "bot"]`)
+    - 'sender_id' (`Optional[str]`)
     - `content` (`str`)
     - `content_type` (`ContentType="text/markdown"`)
     - `timestamp` (`int = 0`)
@@ -58,6 +59,7 @@ class ProtocolMessage(BaseModel):
     """
 
     role: Literal["system", "user", "bot"]
+    sender_id: Optional[str]
     content: str
     content_type: ContentType = "text/markdown"
     timestamp: int = 0

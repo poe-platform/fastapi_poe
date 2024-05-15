@@ -1,6 +1,6 @@
 
 
-The following it the API reference for the [fastapi_poe](https://github.com/poe-platform/fastapi_poe) client library. The reference assumes that you used `import fastapi_poe as fp`.
+The following is the API reference for the [fastapi_poe](https://github.com/poe-platform/fastapi_poe) client library. The reference assumes that you used `import fastapi_poe as fp`.
 
 ## `fp.PoeBot`
 
@@ -16,10 +16,13 @@ provided is used to validate that the requests are coming from a trusted source.
 should be the same one that you provide when integrating your bot with Poe at:
 https://poe.com/create_bot?server=1. You can also set this to None but certain features like
 file output that mandate an `access_key` will not be available for your bot.
-- `concat_attachments_to_message` (`bool = True`): A flag to decide whether to parse out
-content from attachments and concatenate it to the conversation message. This is set to `True`
-by default and we recommend leaving on since it allows your bot to comprehend attachments
+- `should_insert_attachment_messages` (`bool = True`): A flag to decide whether to parse out
+content from attachments and insert them as messages into the conversation. This is set to
+`True`by default and we recommend leaving on since it allows your bot to comprehend attachments
 uploaded by users by default.
+- `concat_attachments_to_message` (`bool = False`): Deprecated. This was used to concatenate
+attachment content to the message body. This is now handled by `insert_attachment_messages`.
+This will be removed in a future release.
 
 ### `PoeBot.get_response`
 
@@ -146,6 +149,29 @@ manually if needed.
 - `QueryRequest`: the request object after the attachments are unpacked and added to the
 message body.
 
+### `PoeBot.insert_attachment_messages`
+
+Insert messages containing the contents of each user attachment right before the last user
+message. This ensures the bot can consider all relevant information when generating a
+response. This will be called by default if `should_insert_attachment_messages` is set to
+`True` but can also be used manually if needed.
+
+#### Parameters:
+- `query_request` (`QueryRequest`): the request object from Poe.
+#### Returns:
+- `QueryRequest`: the request object after the attachments are unpacked and added to the
+message body.
+
+### `PoeBot.make_prompt_author_role_alternated`
+
+Concatenate consecutive messages from the same author into a single message. This is useful
+for LLMs that require role alternation between user and bot messages.
+
+#### Parameters:
+- `protocol_messages` (`Sequence[ProtocolMessage]`): the messages to make alternated.
+#### Returns:
+- `Sequence[ProtocolMessage]`: the modified messages.
+
 
 
 ---
@@ -262,6 +288,7 @@ on Poe.
 A message as used in the Poe protocol.
 #### Fields:
 - `role` (`Literal["system", "user", "bot"]`)
+- 'sender_id' (`Optional[str]`)
 - `content` (`str`)
 - `content_type` (`ContentType="text/markdown"`)
 - `timestamp` (`int = 0`)
@@ -348,6 +375,8 @@ images.
 - `enforce_author_role_alternation` (`bool = False`): If enabled, Poe will concatenate messages
 so that they follow role alternation, which is a requirement for certain LLM providers like
 Anthropic.
+ - `enable_multi_bot_chat_prompting` (`bool = False`): If enabled, Poe will combine previous bot
+ messages if there is a multibot context.
 
 
 
