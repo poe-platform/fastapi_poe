@@ -99,6 +99,8 @@ class QueryRequest(BaseRequest):
     - `skip_system_prompt` (`bool = False`): Whether to use any system prompting or not.
     - `logit_bias` (`Dict[str, float] = {}`)
     - `stop_sequences` (`List[str] = []`)
+    - `query_creation_time` (`int = 0`): The initial creation time of the (top level) query.
+    This is persistent for any queries that are made to resolve the initial query.
 
     """
 
@@ -113,6 +115,7 @@ class QueryRequest(BaseRequest):
     skip_system_prompt: bool = False
     logit_bias: Dict[str, float] = {}
     stop_sequences: List[str] = []
+    message_creation_time: int = 0
 
 
 class SettingsRequest(BaseRequest):
