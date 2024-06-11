@@ -651,12 +651,15 @@ class PoeBot:
     def error_event(
         text: Optional[str] = None,
         *,
+        raw_response: Optional[object] = None,
         allow_retry: bool = True,
         error_type: Optional[str] = None,
     ) -> ServerSentEvent:
         data: Dict[str, Union[bool, str]] = {"allow_retry": allow_retry}
         if text is not None:
             data["text"] = text
+        if raw_response is not None:
+            data["raw_response"] = repr(raw_response)
         if error_type is not None:
             data["error_type"] = error_type
         return ServerSentEvent(data=json.dumps(data), event="error")
@@ -703,6 +706,7 @@ class PoeBot:
                 elif isinstance(event, ErrorResponse):
                     yield self.error_event(
                         event.text,
+                        raw_response=event.raw_response,
                         allow_retry=event.allow_retry,
                         error_type=event.error_type,
                     )
