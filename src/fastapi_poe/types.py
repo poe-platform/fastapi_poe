@@ -48,7 +48,7 @@ class ProtocolMessage(BaseModel):
     A message as used in the Poe protocol.
     #### Fields:
     - `role` (`Literal["system", "user", "bot"]`)
-    - 'sender_id' (`Optional[str]`)
+    - `sender_id` (`Optional[str]`)
     - `content` (`str`)
     - `content_type` (`ContentType="text/markdown"`)
     - `timestamp` (`int = 0`)
@@ -99,6 +99,7 @@ class QueryRequest(BaseRequest):
     - `skip_system_prompt` (`bool = False`): Whether to use any system prompting or not.
     - `logit_bias` (`Dict[str, float] = {}`)
     - `stop_sequences` (`List[str] = []`)
+    - `language_code` (`str` = "en"`): BCP 47 language code of the user's client.
 
     """
 
@@ -113,6 +114,7 @@ class QueryRequest(BaseRequest):
     skip_system_prompt: bool = False
     logit_bias: Dict[str, float] = {}
     stop_sequences: List[str] = []
+    language_code: str = "en"
 
 
 class SettingsRequest(BaseRequest):
