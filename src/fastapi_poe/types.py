@@ -185,14 +185,14 @@ class SettingsResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     context_clear_window_secs: Optional[int] = None  # deprecated
-    allow_user_context_clear: bool = True  # deprecated
+    allow_user_context_clear: Optional[bool] = None  # deprecated
     server_bot_dependencies: Dict[str, int] = Field(default_factory=dict)
-    allow_attachments: bool = False
-    introduction_message: str = ""
-    expand_text_attachments: bool = True
-    enable_image_comprehension: bool = False
-    enforce_author_role_alternation: bool = False
-    enable_multi_bot_chat_prompting: bool = False
+    allow_attachments: Optional[bool] = None
+    introduction_message: Optional[str] = None
+    expand_text_attachments: Optional[bool] = None
+    enable_image_comprehension: Optional[bool] = None
+    enforce_author_role_alternation: Optional[bool] = None
+    enable_multi_bot_chat_prompting: Optional[bool] = None
 
 
 class AttachmentUploadResponse(BaseModel):
