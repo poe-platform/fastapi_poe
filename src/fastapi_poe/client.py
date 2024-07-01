@@ -612,3 +612,13 @@ async def get_final_response(
     if not chunks:
         raise BotError(f"Bot {bot_name} sent no response")
     return "".join(chunks)
+
+
+def sync_bot_settings(
+    bot_name: str,
+    access_key: str = "",
+    base_url: str = "https://api.poe.com/bot/fetch_settings/",
+) -> None:
+    """Sync bot settings with the Poe server using bot name and its Access Key."""
+    response = httpx.post(f"{base_url}{bot_name}/{access_key}/{PROTOCOL_VERSION}")
+    print(response.text)

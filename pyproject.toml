@@ -4,12 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "fastapi_poe"
-version = "0.0.44"
+version = "0.0.45"
 authors = [
   { name="Lida Li", email="lli@quora.com" },
   { name="Jelle Zijlstra", email="jelle@quora.com" },
   { name="Anmol Singh", email="anmol@quora.com" },
   { name="Yusheng Ding", email="yding@quora.com" },
+  { name="Kris Yang", email="kryang@quora.com" },
 ]
 description = "A demonstration of the Poe protocol using FastAPI"
 readme = "README.md"
