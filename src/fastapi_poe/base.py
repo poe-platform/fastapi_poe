@@ -725,12 +725,20 @@ class PoeBot:
                     yield self.text_event(event.text)
         except Exception as e:
             logger.exception("Error responding to query")
-            yield self.error_event(repr(e), allow_retry=False)
+            yield self.error_event(
+                "The bot encountered an unexpected issue.",
+                raw_response=e,
+                allow_retry=False,
+            )
         try:
             await self._process_pending_attachment_requests(request.message_id)
         except Exception as e:
             logger.exception("Error processing pending attachment requests")
-            yield self.error_event(repr(e), allow_retry=False)
+            yield self.error_event(
+                "The bot encountered an unexpected issue.",
+                raw_response=e,
+                allow_retry=False,
+            )
         yield self.done_event()
 
 
