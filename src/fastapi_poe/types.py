@@ -99,7 +99,9 @@ class QueryRequest(BaseRequest):
     - `skip_system_prompt` (`bool = False`): Whether to use any system prompting or not.
     - `logit_bias` (`Dict[str, float] = {}`)
     - `stop_sequences` (`List[str] = []`)
-    - `language_code` (`str` = "en"`): BCP 47 language code of the user's client.
+    - `language_code` (`str = "en"`): BCP 47 language code of the user's client.
+    - `bot_query_id` (`str = ""`): an identifier representing a bot query. this should be included
+    with requests for point auths/captures.
 
     """
 
@@ -115,6 +117,7 @@ class QueryRequest(BaseRequest):
     logit_bias: Dict[str, float] = {}
     stop_sequences: List[str] = []
     language_code: str = "en"
+    bot_query_id: str = ""
 
 
 class SettingsRequest(BaseRequest):
