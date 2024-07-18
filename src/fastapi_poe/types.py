@@ -100,8 +100,7 @@ class QueryRequest(BaseRequest):
     - `logit_bias` (`Dict[str, float] = {}`)
     - `stop_sequences` (`List[str] = []`)
     - `language_code` (`str = "en"`): BCP 47 language code of the user's client.
-    - `bot_query_id` (`str = ""`): an identifier representing a bot query. this should be included
-    with requests for point auths/captures.
+    - `bot_query_id` (`str = ""`): an identifier representing a bot query.
 
     """
 
@@ -117,7 +116,7 @@ class QueryRequest(BaseRequest):
     logit_bias: Dict[str, float] = {}
     stop_sequences: List[str] = []
     language_code: str = "en"
-    bot_query_id: str = ""
+    bot_query_id: Identifier = ""
 
 
 class SettingsRequest(BaseRequest):
