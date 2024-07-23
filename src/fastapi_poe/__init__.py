@@ -22,6 +22,7 @@ __all__ = [
     "ToolCallDefinition",
     "ToolResultDefinition",
     "MessageFeedback",
+    "sync_bot_settings",
 ]
 
 from .base import PoeBot, make_app, run
@@ -31,6 +32,7 @@ from .client import (
     get_bot_response,
     get_final_response,
     stream_request,
+    sync_bot_settings,
 )
 from .types import (
     Attachment,
