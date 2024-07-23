@@ -5,6 +5,7 @@ __all__ = [
     "stream_request",
     "get_bot_response",
     "get_final_response",
+    "sync_bot_settings",
     "BotError",
     "BotErrorNoRetry",
     "Attachment",
