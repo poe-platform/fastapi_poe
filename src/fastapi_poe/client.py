@@ -620,5 +620,14 @@ def sync_bot_settings(
     base_url: str = "https://api.poe.com/bot/fetch_settings/",
 ) -> None:
     """Sync bot settings with the Poe server using bot name and its Access Key."""
-    response = httpx.post(f"{base_url}{bot_name}/{access_key}/{PROTOCOL_VERSION}")
+    try:
+        response = httpx.post(f"{base_url}{bot_name}/{access_key}/{PROTOCOL_VERSION}")
+        if response.status_code != 200:
+            raise BotError(
+                f"Error fetching settings for bot {bot_name}: {response.text}"
+            )
+    except httpx.ReadTimeout as e:
+        raise BotError(
+            f"Timeout fetching settings for bot {bot_name}. Try sync manually later."
+        ) from e
     print(response.text)
