@@ -88,7 +88,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         logger.info(f"Response status: {response.status_code}")
         try:
             if hasattr(response, "body"):
-                body = json.loads(response.body.decode())
+                body = json.loads(bytes(response.body).decode())
                 logger.debug(f"Response body: {json.dumps(body)}")
         except json.JSONDecodeError:
             logger.error("Response body: Unable to parse JSON")
