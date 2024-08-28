@@ -868,6 +868,7 @@ def make_app(
     bot: Union[PoeBot, Sequence[PoeBot]],
     access_key: str = "",
     *,
+    bot_name: str = "",
     api_key: str = "",
     allow_without_key: bool = False,
     app: Optional[FastAPI] = None,
@@ -912,11 +913,18 @@ def make_app(
             raise ValueError(
                 "Cannot provide api_key if the bot object already has an access key"
             )
+
+        if bot.bot_name is None:
+            bot.bot_name = bot_name
+        elif bot_name:
+            raise ValueError(
+                "Cannot provide bot_name if the bot object already has a bot_name"
+            )
         bots = [bot]
     else:
-        if access_key or api_key:
+        if access_key or api_key or bot_name:
             raise ValueError(
-                "When serving multiple bots, the access_key must be set on each bot"
+                "When serving multiple bots, the access_key/bot_name must be set on each bot"
             )
         bots = bot
 
