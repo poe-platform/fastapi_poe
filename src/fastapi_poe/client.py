@@ -623,16 +623,16 @@ def sync_bot_settings(
 ) -> None:
     """Fetch settings from the running bot server, and then sync them with Poe."""
     try:
-        if settings is not None:
+        if settings is None:
+            response = httpx.post(
+                f"{base_url}fetch_settings/{bot_name}/{access_key}/{PROTOCOL_VERSION}"
+            )
+        else:
             headers = {"Content-Type": "application/json"}
             response = httpx.post(
                 f"{base_url}update_settings/{bot_name}/{access_key}/{PROTOCOL_VERSION}",
                 headers=headers,
                 json=settings,
-            )
-        else:
-            response = httpx.post(
-                f"{base_url}fetch_settings/{bot_name}/{access_key}/{PROTOCOL_VERSION}"
             )
         if response.status_code != 200:
             raise BotError(

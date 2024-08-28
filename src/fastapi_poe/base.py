@@ -951,12 +951,11 @@ def make_app(
                         SettingsRequest(version=PROTOCOL_VERSION, type="settings")
                     )
                 )
-                result = sync_bot_settings(
+                sync_bot_settings(
                     bot_name=bot_obj.bot_name,
                     settings=settings_response.model_dump(),
                     access_key=bot_obj.access_key,
                 )
-                print(result)
             except Exception as e:
                 logger.error("\n*********** Error ***********")
                 logger.error(
