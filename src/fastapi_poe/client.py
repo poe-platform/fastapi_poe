@@ -617,17 +617,30 @@ async def get_final_response(
 def sync_bot_settings(
     bot_name: str,
     access_key: str = "",
-    base_url: str = "https://api.poe.com/bot/fetch_settings/",
+    *,
+    settings: Optional[Dict[str, Any]] = None,
+    base_url: str = "https://api.poe.com/bot/",
 ) -> None:
-    """Sync bot settings with the Poe server using bot name and its Access Key."""
+    """Fetch settings from the running bot server, and then sync them with Poe."""
     try:
-        response = httpx.post(f"{base_url}{bot_name}/{access_key}/{PROTOCOL_VERSION}")
+        if settings is None:
+            response = httpx.post(
+                f"{base_url}fetch_settings/{bot_name}/{access_key}/{PROTOCOL_VERSION}"
+            )
+        else:
+            headers = {"Content-Type": "application/json"}
+            response = httpx.post(
+                f"{base_url}update_settings/{bot_name}/{access_key}/{PROTOCOL_VERSION}",
+                headers=headers,
+                json=settings,
+            )
         if response.status_code != 200:
             raise BotError(
-                f"Error fetching settings for bot {bot_name}: {response.text}"
+                f"Error syncing settings for bot {bot_name}: {response.text}"
             )
     except httpx.ReadTimeout as e:
-        raise BotError(
-            f"Timeout fetching settings for bot {bot_name}. Try sync manually later."
-        ) from e
+        error_message = f"Timeout syncing settings for bot {bot_name}."
+        if not settings:
+            error_message += " Check that the bot server is running."
+        raise BotError(error_message) from e
     print(response.text)
