@@ -95,7 +95,7 @@ class QueryRequest(BaseRequest):
     - `message_id` (`Identifier`): an identifier representing a message.
     - `access_key` (`str = "<missing>"`): contains the access key defined when you created your bot
     on Poe.
-    - `temperature` (`float = 0.7`): Temperature input to be used for model inference.
+    - `temperature` (`float | None = None`): Temperature input to be used for model inference.
     - `skip_system_prompt` (`bool = False`): Whether to use any system prompting or not.
     - `logit_bias` (`Dict[str, float] = {}`)
     - `stop_sequences` (`List[str] = []`)
@@ -111,7 +111,7 @@ class QueryRequest(BaseRequest):
     metadata: Identifier = ""
     api_key: str = "<missing>"
     access_key: str = "<missing>"
-    temperature: float = 0.7
+    temperature: Optional[float] = None
     skip_system_prompt: bool = False
     logit_bias: Dict[str, float] = {}
     stop_sequences: List[str] = []
