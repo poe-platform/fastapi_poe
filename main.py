@@ -2,6 +2,7 @@ from fastapi_poe.types import ProtocolMessage
 from fastapi_poe.client import get_bot_response
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, APIRouter, File, UploadFile, Depends, Form, status
 from typing import Optional, Generator
 import uvicorn
@@ -16,6 +17,22 @@ concated= ""
 # router.add_api_route('/api/v2/hello-world', 
 # endpoint = HelloWorld().read_hello, methods=["GET"])
 # app.include_router(router)
+
+origins =["*"]
+
+expose_headers = [
+	"Access-Control-Allow-Origin"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all HTTP methods (GET, POST, PUT, DELETE, etc.)
+    allow_headers=["*"],  # Allow all headers
+    expose_headers=expose_headers
+)
+
 
 from pydantic import BaseModel, AnyHttpUrl
 
