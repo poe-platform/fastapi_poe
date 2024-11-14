@@ -158,9 +158,23 @@ class _BotContext:
                         )
                     return
                 elif event.event == "text":
-                    text = await self._get_single_json_field(
-                        event.data, "text", message_id
+                    data_dict = await self._load_json_dict(event.data, "text", message_id)
+                    text = data_dict.get("text")
+                    if not isinstance(text, str):
+                        await self.report_error(
+                            "Expected string in 'text' field for 'text' event",
+                            {"data": data_dict, "message_id": message_id},
+                        )
+                        raise BotErrorNoRetry("Expected string in 'text' event")
+                    chunks.append(text)
+                    yield BotMessage(
+                        text=text,
+                        raw_response={"type": event.event, "text": event.data},
+                        full_prompt=repr(request),
+                        data=data_dict,
+                        is_replace_response=(event.event == "replace_response"),
                     )
+                    continue
                 elif event.event == "replace_response":
                     text = await self._get_single_json_field(
                         event.data, "replace_response", message_id
