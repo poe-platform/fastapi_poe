@@ -158,7 +158,9 @@ class _BotContext:
                         )
                     return
                 elif event.event == "text":
-                    data_dict = await self._load_json_dict(event.data, "text", message_id)
+                    data_dict = await self._load_json_dict(
+                        event.data, "text", message_id
+                    )
                     text = data_dict.get("text")
                     if not isinstance(text, str):
                         await self.report_error(
