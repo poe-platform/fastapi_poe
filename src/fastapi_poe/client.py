@@ -265,6 +265,7 @@ class _BotContext:
                     text=text,
                     raw_response={"type": event.event, "text": event.data},
                     full_prompt=repr(request),
+                    data=event.data,
                     is_replace_response=(event.event == "replace_response"),
                 )
         await self.report_error(
