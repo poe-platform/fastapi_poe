@@ -8,8 +8,16 @@ import sys
 import warnings
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import (AsyncIterable, Awaitable, BinaryIO, Callable, Dict,
-                    Optional, Sequence, Union)
+from typing import (
+    AsyncIterable,
+    Awaitable,
+    BinaryIO,
+    Callable,
+    Dict,
+    Optional,
+    Sequence,
+    Union,
+)
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
@@ -22,15 +30,27 @@ from starlette.types import Message
 from typing_extensions import deprecated, overload
 
 from fastapi_poe.client import PROTOCOL_VERSION, sync_bot_settings
-from fastapi_poe.templates import (IMAGE_VISION_ATTACHMENT_TEMPLATE,
-                                   TEXT_ATTACHMENT_TEMPLATE,
-                                   URL_ATTACHMENT_TEMPLATE)
-from fastapi_poe.types import (AttachmentUploadResponse, ContentType,
-                               ErrorResponse, Identifier, MetaResponse,
-                               PartialResponse, ProtocolMessage, QueryRequest,
-                               ReportErrorRequest, ReportFeedbackRequest,
-                               ReportReactionRequest, RequestContext,
-                               SettingsRequest, SettingsResponse)
+from fastapi_poe.templates import (
+    IMAGE_VISION_ATTACHMENT_TEMPLATE,
+    TEXT_ATTACHMENT_TEMPLATE,
+    URL_ATTACHMENT_TEMPLATE,
+)
+from fastapi_poe.types import (
+    AttachmentUploadResponse,
+    ContentType,
+    ErrorResponse,
+    Identifier,
+    MetaResponse,
+    PartialResponse,
+    ProtocolMessage,
+    QueryRequest,
+    ReportErrorRequest,
+    ReportFeedbackRequest,
+    ReportReactionRequest,
+    RequestContext,
+    SettingsRequest,
+    SettingsResponse,
+)
 
 logger = logging.getLogger("uvicorn.default")
 
@@ -307,8 +327,7 @@ class PoeBot:
         filename: Optional[str] = None,
         content_type: Optional[str] = None,
         is_inline: bool = False,
-    ) -> AttachmentUploadResponse:
-        ...
+    ) -> AttachmentUploadResponse: ...
 
     # This overload requires all parameters to be passed as keywords
     @overload
@@ -321,8 +340,7 @@ class PoeBot:
         filename: Optional[str] = None,
         content_type: Optional[str] = None,
         is_inline: bool = False,
-    ) -> AttachmentUploadResponse:
-        ...
+    ) -> AttachmentUploadResponse: ...
 
     async def post_message_attachment(
         self,

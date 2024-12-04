@@ -16,11 +16,18 @@ from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, cast
 import httpx
 import httpx_sse
 
-from .types import ContentType, Identifier
+from .types import (
+    ContentType,
+    Identifier,
+    ProtocolMessage,
+    QueryRequest,
+    SettingsResponse,
+    ToolCallDefinition,
+    ToolDefinition,
+    ToolResultDefinition,
+)
 from .types import MetaResponse as MetaMessage
 from .types import PartialResponse as BotMessage
-from .types import (ProtocolMessage, QueryRequest, SettingsResponse,
-                    ToolCallDefinition, ToolDefinition, ToolResultDefinition)
 
 PROTOCOL_VERSION = "1.0"
 MESSAGE_LENGTH_LIMIT = 10_000
