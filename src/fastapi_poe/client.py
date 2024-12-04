@@ -114,6 +114,27 @@ class _BotContext:
             },
         )
 
+    async def report_reaction(
+        self,
+        message_id: Identifier,
+        user_id: Identifier,
+        conversation_id: Identifier,
+        reaction: str,
+    ) -> None:
+        """Report message reaction to the bot server."""
+        await self.session.post(
+            self.endpoint,
+            headers=self.headers,
+            json={
+                "version": PROTOCOL_VERSION,
+                "type": "report_reaction",
+                "message_id": message_id,
+                "user_id": user_id,
+                "conversation_id": conversation_id,
+                "reaction": reaction,
+            },
+        )
+
     async def fetch_settings(self) -> SettingsResponse:
         """Fetches settings from a Poe server bot endpoint."""
         resp = await self.session.post(

@@ -46,6 +46,7 @@ from fastapi_poe.types import (
     QueryRequest,
     ReportErrorRequest,
     ReportFeedbackRequest,
+    ReportReactionRequest,
     RequestContext,
     SettingsRequest,
     SettingsResponse,
@@ -245,6 +246,23 @@ class PoeBot:
 
         """
         await self.on_feedback(feedback_request)
+
+    async def on_reaction_with_context(
+        self, reaction_request: ReportReactionRequest, context: RequestContext
+    ) -> None:
+        """
+
+        Override this to record reaction from the user. This also includes the request context
+        information.
+
+        #### Parameters:
+        - `reaction_request` (`ReportReactionRequest`): An object representing a reaction request
+        from Poe. This is sent out when a user provides reaction on a response on your bot.
+        - `context` (`RequestContext`): an object representing the current HTTP request.
+        #### Returns: `None`
+
+        """
+        pass
 
     async def on_error(self, error_request: ReportErrorRequest) -> None:
         """
@@ -674,6 +692,12 @@ class PoeBot:
         await self.on_feedback_with_context(feedback_request, context)
         return JSONResponse({})
 
+    async def handle_report_reaction(
+        self, reaction_request: ReportReactionRequest, context: RequestContext
+    ) -> JSONResponse:
+        await self.on_reaction_with_context(reaction_request, context)
+        return JSONResponse({})
+
     async def handle_report_error(
         self, error_request: ReportErrorRequest, context: RequestContext
     ) -> JSONResponse:
@@ -850,6 +874,11 @@ def _add_routes_for_bot(app: FastAPI, bot: PoeBot) -> None:
         elif request_body["type"] == "report_feedback":
             return await bot.handle_report_feedback(
                 ReportFeedbackRequest.parse_obj(request_body),
+                RequestContext(http_request=request),
+            )
+        elif request_body["type"] == "report_reaction":
+            return await bot.handle_report_reaction(
+                ReportReactionRequest.parse_obj(request_body),
                 RequestContext(http_request=request),
             )
         elif request_body["type"] == "report_error":
