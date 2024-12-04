@@ -247,25 +247,13 @@ class PoeBot:
         """
         await self.on_feedback(feedback_request)
 
-    async def on_reaction(self, reaction_request: ReportReactionRequest) -> None:
-        """
-
-        Override this to record reaction from the user.
-        #### Parameters:
-        - `reaction_request` (`ReportReactionRequest`): An object representing a reaction request
-        from Poe. This is sent out when a user provides reaction on a response on your bot.
-        #### Returns: `None`
-
-        """
-        pass
-
     async def on_reaction_with_context(
         self, reaction_request: ReportReactionRequest, context: RequestContext
     ) -> None:
         """
 
-        A version of `on_reaction` that also includes the request context information. By
-        default, this will call `on_reaction`.
+        Override this to record reaction from the user. This also includes the request context
+        information.
 
         #### Parameters:
         - `reaction_request` (`ReportReactionRequest`): An object representing a reaction request
@@ -274,7 +262,7 @@ class PoeBot:
         #### Returns: `None`
 
         """
-        await self.on_reaction(reaction_request)
+        pass
 
     async def on_error(self, error_request: ReportErrorRequest) -> None:
         """
