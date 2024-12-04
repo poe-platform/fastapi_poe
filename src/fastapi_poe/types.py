@@ -79,7 +79,9 @@ class BaseRequest(BaseModel):
     """Common data for all requests."""
 
     version: str
-    type: Literal["query", "settings", "report_feedback", "report_error"]
+    type: Literal[
+        "query", "settings", "report_feedback", "report_reaction", "report_error"
+    ]
 
 
 class QueryRequest(BaseRequest):
@@ -144,6 +146,24 @@ class ReportFeedbackRequest(BaseRequest):
     user_id: Identifier
     conversation_id: Identifier
     feedback_type: FeedbackType
+
+
+class ReportReactionRequest(BaseRequest):
+    """
+
+    Request parameters for a report_reaction request.
+    #### Fields:
+    - `message_id` (`Identifier`)
+    - `user_id` (`Identifier`)
+    - `conversation_id` (`Identifier`)
+    - `reaction` (`str`)
+
+    """
+
+    message_id: Identifier
+    user_id: Identifier
+    conversation_id: Identifier
+    reaction: str
 
 
 class ReportErrorRequest(BaseRequest):

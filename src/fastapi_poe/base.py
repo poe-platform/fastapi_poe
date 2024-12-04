@@ -8,16 +8,8 @@ import sys
 import warnings
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import (
-    AsyncIterable,
-    Awaitable,
-    BinaryIO,
-    Callable,
-    Dict,
-    Optional,
-    Sequence,
-    Union,
-)
+from typing import (AsyncIterable, Awaitable, BinaryIO, Callable, Dict,
+                    Optional, Sequence, Union)
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
@@ -30,26 +22,15 @@ from starlette.types import Message
 from typing_extensions import deprecated, overload
 
 from fastapi_poe.client import PROTOCOL_VERSION, sync_bot_settings
-from fastapi_poe.templates import (
-    IMAGE_VISION_ATTACHMENT_TEMPLATE,
-    TEXT_ATTACHMENT_TEMPLATE,
-    URL_ATTACHMENT_TEMPLATE,
-)
-from fastapi_poe.types import (
-    AttachmentUploadResponse,
-    ContentType,
-    ErrorResponse,
-    Identifier,
-    MetaResponse,
-    PartialResponse,
-    ProtocolMessage,
-    QueryRequest,
-    ReportErrorRequest,
-    ReportFeedbackRequest,
-    RequestContext,
-    SettingsRequest,
-    SettingsResponse,
-)
+from fastapi_poe.templates import (IMAGE_VISION_ATTACHMENT_TEMPLATE,
+                                   TEXT_ATTACHMENT_TEMPLATE,
+                                   URL_ATTACHMENT_TEMPLATE)
+from fastapi_poe.types import (AttachmentUploadResponse, ContentType,
+                               ErrorResponse, Identifier, MetaResponse,
+                               PartialResponse, ProtocolMessage, QueryRequest,
+                               ReportErrorRequest, ReportFeedbackRequest,
+                               ReportReactionRequest, RequestContext,
+                               SettingsRequest, SettingsResponse)
 
 logger = logging.getLogger("uvicorn.default")
 
@@ -246,6 +227,35 @@ class PoeBot:
         """
         await self.on_feedback(feedback_request)
 
+    async def on_reaction(self, reaction_request: ReportReactionRequest) -> None:
+        """
+
+        Override this to record reaction from the user.
+        #### Parameters:
+        - `reaction_request` (`ReportReactionRequest`): An object representing a reaction request
+        from Poe. This is sent out when a user provides reaction on a response on your bot.
+        #### Returns: `None`
+
+        """
+        pass
+
+    async def on_reaction_with_context(
+        self, reaction_request: ReportReactionRequest, context: RequestContext
+    ) -> None:
+        """
+
+        A version of `on_reaction` that also includes the request context information. By
+        default, this will call `on_reaction`.
+
+        #### Parameters:
+        - `reaction_request` (`ReportReactionRequest`): An object representing a reaction request
+        from Poe. This is sent out when a user provides reaction on a response on your bot.
+        - `context` (`RequestContext`): an object representing the current HTTP request.
+        #### Returns: `None`
+
+        """
+        await self.on_reaction(reaction_request)
+
     async def on_error(self, error_request: ReportErrorRequest) -> None:
         """
 
@@ -297,7 +307,8 @@ class PoeBot:
         filename: Optional[str] = None,
         content_type: Optional[str] = None,
         is_inline: bool = False,
-    ) -> AttachmentUploadResponse: ...
+    ) -> AttachmentUploadResponse:
+        ...
 
     # This overload requires all parameters to be passed as keywords
     @overload
@@ -310,7 +321,8 @@ class PoeBot:
         filename: Optional[str] = None,
         content_type: Optional[str] = None,
         is_inline: bool = False,
-    ) -> AttachmentUploadResponse: ...
+    ) -> AttachmentUploadResponse:
+        ...
 
     async def post_message_attachment(
         self,
@@ -674,6 +686,12 @@ class PoeBot:
         await self.on_feedback_with_context(feedback_request, context)
         return JSONResponse({})
 
+    async def handle_report_reaction(
+        self, reaction_request: ReportReactionRequest, context: RequestContext
+    ) -> JSONResponse:
+        await self.on_reaction_with_context(reaction_request, context)
+        return JSONResponse({})
+
     async def handle_report_error(
         self, error_request: ReportErrorRequest, context: RequestContext
     ) -> JSONResponse:
@@ -850,6 +868,11 @@ def _add_routes_for_bot(app: FastAPI, bot: PoeBot) -> None:
         elif request_body["type"] == "report_feedback":
             return await bot.handle_report_feedback(
                 ReportFeedbackRequest.parse_obj(request_body),
+                RequestContext(http_request=request),
+            )
+        elif request_body["type"] == "report_reaction":
+            return await bot.handle_report_reaction(
+                ReportReactionRequest.parse_obj(request_body),
                 RequestContext(http_request=request),
             )
         elif request_body["type"] == "report_error":

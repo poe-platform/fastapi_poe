@@ -1,5 +1,6 @@
 import pydantic
 import pytest
+
 from fastapi_poe.types import PartialResponse
 
 
