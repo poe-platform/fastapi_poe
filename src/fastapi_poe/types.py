@@ -7,7 +7,7 @@ from typing_extensions import Literal, TypeAlias
 Identifier: TypeAlias = str
 FeedbackType: TypeAlias = Literal["like", "dislike"]
 ContentType: TypeAlias = Literal["text/markdown", "text/plain"]
-ErrorType: TypeAlias = Literal["user_message_too_long"]
+ErrorType: TypeAlias = Literal["user_message_too_long", "insufficient_fund"]
 
 
 class MessageFeedback(BaseModel):
@@ -22,6 +22,20 @@ class MessageFeedback(BaseModel):
 
     type: FeedbackType
     reason: Optional[str]
+
+
+class CostItem(BaseModel):
+    """
+
+    An object representing a cost item used for authorization and charge request.
+    #### Fields:
+    - `amount_usd_milli_cents` (`int`)
+    - `description` (`str`)
+
+    """
+
+    amount_usd_milli_cents: int
+    description: Optional[str] = None
 
 
 class Attachment(BaseModel):
@@ -215,6 +229,7 @@ class SettingsResponse(BaseModel):
     enable_image_comprehension: Optional[bool] = None
     enforce_author_role_alternation: Optional[bool] = None
     enable_multi_bot_chat_prompting: Optional[bool] = None
+    custom_rate_card: Optional[str] = None
 
 
 class AttachmentUploadResponse(BaseModel):
