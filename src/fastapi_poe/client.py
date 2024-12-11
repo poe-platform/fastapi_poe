@@ -354,7 +354,7 @@ async def stream_request(
         assert tool_executables is not None
         tool_calls = await _get_tool_calls(
             request=request,
-            bot_name=bot_name,
+            bot_name='ChatGPT',#In practice, 'ChatGPT' has proven to be sufficiently fast and stable. Therefore, set it as the tool bot.
             api_key=api_key,
             tools=tools,
             access_key=access_key,
@@ -467,7 +467,31 @@ async def _get_tool_calls(
         for tool_call_object in tool_call_object_list
     ]
 
-
+#Modify stream_request_base using a decorator to extract function results from tools_results and place them into ProtocolMessage for better bot compatibility.
+def modify_srb(func):
+    def wrapper(**kwargs):
+        pre_modify_parms = ('request','bot_name','tool_results')
+        request, bot_name, tool_results = (kwargs.get(key, None) for key in pre_modify_parms)
+        #Function calling is only supported by OpenAI's LLMs. Therefore "'gpt' in bot_name" is a useful tip.
+        if 'gpt' not in bot_name.lower() and tool_results != None :
+            if tool_results:
+                TResultDef_Str = ''
+                for TResultDef in tool_results:
+                    #When there are characters in the sentence, it needs to be processed.
+                    _tres_content = json.loads(json.loads(TResultDef.content).encode('utf-8').decode('utf-8'))
+                    ##Latin languages can be directly handled in this way
+                    #_tres_content = TResultDef.content
+                    TResultDef_Str += f'{_tres_content}\n'
+                request.query[-1].content = f'system:{TResultDef_Str}\n{request.query[-1].content}'
+                tool_results = None
+            kwargs['request'] = request
+            kwargs['tools'] = None
+            kwargs['tool_calls'] = None
+            kwargs['tool_results'] = tool_results
+        return func(**kwargs)
+    return wrapper
+    
+@modify_srb
 async def stream_request_base(
     request: QueryRequest,
     bot_name: str,
