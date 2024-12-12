@@ -774,6 +774,134 @@ class PoeBot:
             )
             raise
 
+    async def capture_cost(
+        self,
+        request: QueryRequest,
+        amounts: Union[list[CostItem], CostItem],
+        access_key: Optional[str] = None,
+        base_url: str = "https://api.poe.com/",
+    ) -> None:
+        """
+
+        Used to capture a cost for monetized creators.
+
+        #### Parameters:
+        - `request` (`QueryRequest`): The currently handlded QueryRequest object.
+        - `amounts` (`Union[list[CostItem], CostItem]`): The to be captured amounts.
+        - `access_key` (`str`): The access_key corresponding to your bot. This is needed to ensure
+        that capture requests are coming from an authorized source.
+
+        """
+
+        if self.access_key:
+            if access_key:
+                warnings.warn(
+                    "Bot already has an access key, access_key parameter is not needed.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                request_access_key = access_key
+            else:
+                request_access_key = self.access_key
+        else:
+            if access_key is None:
+                raise InvalidParameterError(
+                    "access_key parameter is required if bot is not"
+                    + " provided with an access_key when make_app is called."
+                )
+
+        if not request.bot_query_id:
+            raise InvalidParameterError(
+                "bot_query_id is required to make cost requests."
+            )
+
+        url = f"{base_url}bot/cost/{request.bot_query_id}/capture"
+        result = await self._cost_requests_inner(
+            amounts=amounts, access_key=request_access_key, url=url
+        )
+        if not result:
+            raise InsufficientFundError()
+
+    async def authorize_cost(
+        self,
+        request: QueryRequest,
+        amounts: Union[list[CostItem], CostItem],
+        access_key: Optional[str] = None,
+        base_url: str = "https://api.poe.com/",
+    ) -> None:
+        """
+
+        Used to authorize a cost for monetized creators.
+
+        #### Parameters:
+        - `request` (`QueryRequest`): The currently handlded QueryRequest object.
+        - `amounts` (`Union[list[CostItem], CostItem]`): The to be authorized amounts.
+        - `access_key` (`str`): The access_key corresponding to your bot. This is needed to ensure
+        that authorize requests are coming from an authorized source.
+
+        """
+
+        if self.access_key:
+            if access_key:
+                warnings.warn(
+                    "Bot already has an access key, access_key parameter is not needed.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                request_access_key = access_key
+            else:
+                request_access_key = self.access_key
+        else:
+            if access_key is None:
+                raise InvalidParameterError(
+                    "access_key parameter is required if bot is not"
+                    + " provided with an access_key when make_app is called."
+                )
+
+        if not request.bot_query_id:
+            raise InvalidParameterError(
+                "bot_query_id is required to make cost requests."
+            )
+
+        url = f"{base_url}bot/cost/{request.bot_query_id}/authorize"
+        result = await self._cost_requests_inner(
+            amounts=amounts, access_key=request_access_key, url=url
+        )
+        if not result:
+            raise InsufficientFundError()
+
+    async def _cost_requests_inner(
+        self, amounts: Union[list[CostItem], CostItem], access_key: str, url: str
+    ) -> bool:
+        amounts = [amounts] if isinstance(amounts, CostItem) else amounts
+        amounts = [amount.model_dump() for amount in amounts]
+        data = {"amounts": amounts, "access_key": access_key}
+        try:
+            async with httpx.AsyncClient(timeout=300) as client, httpx_sse.aconnect_sse(
+                client, method="POST", url=url, json=data
+            ) as event_source:
+                if event_source.response.status_code != 200:
+                    error_pieces = [
+                        json.loads(event.data).get("message", "")
+                        async for event in event_source.aiter_sse()
+                    ]
+                    raise CostRequestError(
+                        f"{event_source.response.status_code} "
+                        f"{event_source.response.reason_phrase}: {''.join(error_pieces)}"
+                    )
+
+                async for event in event_source.aiter_sse():
+                    if event.event == "result":
+                        event_data = json.loads(event.data)
+                        result = event_data["status"]
+                        return result == "success"
+            return False
+        except httpx.HTTPError:
+            logger.error(
+                "An HTTP error occurred when attempting to send a cost request."
+            )
+            raise
+
     @staticmethod
     def text_event(text: str) -> ServerSentEvent:
         return ServerSentEvent(data=json.dumps({"text": text}), event="text")
