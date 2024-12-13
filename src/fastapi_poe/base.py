@@ -715,8 +715,8 @@ class PoeBot:
         self, amounts: Union[List[CostItem], CostItem], access_key: str, url: str
     ) -> bool:
         amounts = [amounts] if isinstance(amounts, CostItem) else amounts
-        amounts = [amount.model_dump() for amount in amounts]
-        data = {"amounts": amounts, "access_key": access_key}
+        amounts_dicts = [amount.model_dump() for amount in amounts]
+        data = {"amounts": amounts_dicts, "access_key": access_key}
         try:
             async with httpx.AsyncClient(timeout=300) as client, httpx_sse.aconnect_sse(
                 client, method="POST", url=url, json=data
