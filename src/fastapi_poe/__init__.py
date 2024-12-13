@@ -24,9 +24,12 @@ __all__ = [
     "ToolResultDefinition",
     "MessageFeedback",
     "sync_bot_settings",
+    "CostItem",
+    "InsufficientFundError",
+    "CostRequestError",
 ]
 
-from .base import PoeBot, make_app, run
+from .base import CostRequestError, InsufficientFundError, PoeBot, make_app, run
 from .client import (
     BotError,
     BotErrorNoRetry,
@@ -37,6 +40,7 @@ from .client import (
 )
 from .types import (
     Attachment,
+    CostItem,
     ErrorResponse,
     MessageFeedback,
     MetaResponse,
