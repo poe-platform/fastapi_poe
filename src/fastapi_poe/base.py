@@ -14,12 +14,14 @@ from typing import (
     BinaryIO,
     Callable,
     Dict,
+    List,
     Optional,
     Sequence,
     Union,
 )
 
 import httpx
+import httpx_sse
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -38,6 +40,7 @@ from fastapi_poe.templates import (
 from fastapi_poe.types import (
     AttachmentUploadResponse,
     ContentType,
+    CostItem,
     ErrorResponse,
     Identifier,
     MetaResponse,
@@ -46,6 +49,7 @@ from fastapi_poe.types import (
     QueryRequest,
     ReportErrorRequest,
     ReportFeedbackRequest,
+    ReportReactionRequest,
     RequestContext,
     SettingsRequest,
     SettingsResponse,
@@ -59,6 +63,14 @@ class InvalidParameterError(Exception):
 
 
 class AttachmentUploadError(Exception):
+    pass
+
+
+class CostRequestError(Exception):
+    pass
+
+
+class InsufficientFundError(Exception):
     pass
 
 
@@ -181,8 +193,11 @@ class PoeBot:
         response to the Poe servers. This is what gets displayed to the user.
 
         """
-        async for event in self.get_response(request):
-            yield event
+        try:
+            async for event in self.get_response(request):
+                yield event
+        except InsufficientFundError:
+            yield ErrorResponse(error_type="insufficient_fund", text="")
 
     async def get_settings(self, setting: SettingsRequest) -> SettingsResponse:
         """
@@ -245,6 +260,23 @@ class PoeBot:
 
         """
         await self.on_feedback(feedback_request)
+
+    async def on_reaction_with_context(
+        self, reaction_request: ReportReactionRequest, context: RequestContext
+    ) -> None:
+        """
+
+        Override this to record reaction from the user. This also includes the request context
+        information.
+
+        #### Parameters:
+        - `reaction_request` (`ReportReactionRequest`): An object representing a reaction request
+        from Poe. This is sent out when a user provides reaction on a response on your bot.
+        - `context` (`RequestContext`): an object representing the current HTTP request.
+        #### Returns: `None`
+
+        """
+        pass
 
     async def on_error(self, error_request: ReportErrorRequest) -> None:
         """
@@ -611,6 +643,106 @@ class PoeBot:
 
         return new_messages
 
+    async def capture_cost(
+        self,
+        request: QueryRequest,
+        amounts: Union[List[CostItem], CostItem],
+        base_url: str = "https://api.poe.com/",
+    ) -> None:
+        """
+
+        Used to capture variable costs for monetized and eligible bot creators.
+        Visit https://creator.poe.com/docs/creator-monetization for more information.
+
+        #### Parameters:
+        - `request` (`QueryRequest`): The currently handlded QueryRequest object.
+        - `amounts` (`Union[List[CostItem], CostItem]`): The to be captured amounts.
+
+        """
+
+        if not self.access_key:
+            raise CostRequestError(
+                "Please provide the bot access_key when make_app is called."
+            )
+
+        if not request.bot_query_id:
+            raise InvalidParameterError(
+                "bot_query_id is required to make cost requests."
+            )
+
+        url = f"{base_url}bot/cost/{request.bot_query_id}/capture"
+        result = await self._cost_requests_inner(
+            amounts=amounts, access_key=self.access_key, url=url
+        )
+        if not result:
+            raise InsufficientFundError()
+
+    async def authorize_cost(
+        self,
+        request: QueryRequest,
+        amounts: Union[List[CostItem], CostItem],
+        base_url: str = "https://api.poe.com/",
+    ) -> None:
+        """
+
+        Used to authorize a cost for monetized and eligible bot creators.
+        Visit https://creator.poe.com/docs/creator-monetization for more information.
+
+        #### Parameters:
+        - `request` (`QueryRequest`): The currently handlded QueryRequest object.
+        - `amounts` (`Union[List[CostItem], CostItem]`): The to be authorized amounts.
+
+        """
+
+        if not self.access_key:
+            raise CostRequestError(
+                "Please provide the bot access_key when make_app is called."
+            )
+
+        if not request.bot_query_id:
+            raise InvalidParameterError(
+                "bot_query_id is required to make cost requests."
+            )
+
+        url = f"{base_url}bot/cost/{request.bot_query_id}/authorize"
+        result = await self._cost_requests_inner(
+            amounts=amounts, access_key=self.access_key, url=url
+        )
+        if not result:
+            raise InsufficientFundError()
+
+    async def _cost_requests_inner(
+        self, amounts: Union[List[CostItem], CostItem], access_key: str, url: str
+    ) -> bool:
+        amounts = [amounts] if isinstance(amounts, CostItem) else amounts
+        amounts = [amount.model_dump() for amount in amounts]
+        data = {"amounts": amounts, "access_key": access_key}
+        try:
+            async with httpx.AsyncClient(timeout=300) as client, httpx_sse.aconnect_sse(
+                client, method="POST", url=url, json=data
+            ) as event_source:
+                if event_source.response.status_code != 200:
+                    error_pieces = [
+                        json.loads(event.data).get("message", "")
+                        async for event in event_source.aiter_sse()
+                    ]
+                    raise CostRequestError(
+                        f"{event_source.response.status_code} "
+                        f"{event_source.response.reason_phrase}: {''.join(error_pieces)}"
+                    )
+
+                async for event in event_source.aiter_sse():
+                    if event.event == "result":
+                        event_data = json.loads(event.data)
+                        result = event_data["status"]
+                        return result == "success"
+            return False
+        except httpx.HTTPError:
+            logger.error(
+                "An HTTP error occurred when attempting to send a cost request."
+            )
+            raise
+
     @staticmethod
     def text_event(text: str) -> ServerSentEvent:
         return ServerSentEvent(data=json.dumps({"text": text}), event="text")
@@ -672,6 +804,12 @@ class PoeBot:
         self, feedback_request: ReportFeedbackRequest, context: RequestContext
     ) -> JSONResponse:
         await self.on_feedback_with_context(feedback_request, context)
+        return JSONResponse({})
+
+    async def handle_report_reaction(
+        self, reaction_request: ReportReactionRequest, context: RequestContext
+    ) -> JSONResponse:
+        await self.on_reaction_with_context(reaction_request, context)
         return JSONResponse({})
 
     async def handle_report_error(
@@ -850,6 +988,11 @@ def _add_routes_for_bot(app: FastAPI, bot: PoeBot) -> None:
         elif request_body["type"] == "report_feedback":
             return await bot.handle_report_feedback(
                 ReportFeedbackRequest.parse_obj(request_body),
+                RequestContext(http_request=request),
+            )
+        elif request_body["type"] == "report_reaction":
+            return await bot.handle_report_reaction(
+                ReportReactionRequest.parse_obj(request_body),
                 RequestContext(http_request=request),
             )
         elif request_body["type"] == "report_error":

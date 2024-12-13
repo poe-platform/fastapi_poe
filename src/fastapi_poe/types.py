@@ -7,7 +7,7 @@ from typing_extensions import Literal, TypeAlias
 Identifier: TypeAlias = str
 FeedbackType: TypeAlias = Literal["like", "dislike"]
 ContentType: TypeAlias = Literal["text/markdown", "text/plain"]
-ErrorType: TypeAlias = Literal["user_message_too_long"]
+ErrorType: TypeAlias = Literal["user_message_too_long", "insufficient_fund"]
 
 
 class MessageFeedback(BaseModel):
@@ -22,6 +22,20 @@ class MessageFeedback(BaseModel):
 
     type: FeedbackType
     reason: Optional[str]
+
+
+class CostItem(BaseModel):
+    """
+
+    An object representing a cost item used for authorization and charge request.
+    #### Fields:
+    - `amount_usd_milli_cents` (`int`)
+    - `description` (`str`)
+
+    """
+
+    amount_usd_milli_cents: int
+    description: Optional[str] = None
 
 
 class Attachment(BaseModel):
@@ -79,7 +93,9 @@ class BaseRequest(BaseModel):
     """Common data for all requests."""
 
     version: str
-    type: Literal["query", "settings", "report_feedback", "report_error"]
+    type: Literal[
+        "query", "settings", "report_feedback", "report_reaction", "report_error"
+    ]
 
 
 class QueryRequest(BaseRequest):
@@ -95,7 +111,7 @@ class QueryRequest(BaseRequest):
     - `message_id` (`Identifier`): an identifier representing a message.
     - `access_key` (`str = "<missing>"`): contains the access key defined when you created your bot
     on Poe.
-    - `temperature` (`float = 0.7`): Temperature input to be used for model inference.
+    - `temperature` (`float | None = None`): Temperature input to be used for model inference.
     - `skip_system_prompt` (`bool = False`): Whether to use any system prompting or not.
     - `logit_bias` (`Dict[str, float] = {}`)
     - `stop_sequences` (`List[str] = []`)
@@ -111,7 +127,7 @@ class QueryRequest(BaseRequest):
     metadata: Identifier = ""
     api_key: str = "<missing>"
     access_key: str = "<missing>"
-    temperature: float = 0.7
+    temperature: Optional[float] = None
     skip_system_prompt: bool = False
     logit_bias: Dict[str, float] = {}
     stop_sequences: List[str] = []
@@ -144,6 +160,24 @@ class ReportFeedbackRequest(BaseRequest):
     user_id: Identifier
     conversation_id: Identifier
     feedback_type: FeedbackType
+
+
+class ReportReactionRequest(BaseRequest):
+    """
+
+    Request parameters for a report_reaction request.
+    #### Fields:
+    - `message_id` (`Identifier`)
+    - `user_id` (`Identifier`)
+    - `conversation_id` (`Identifier`)
+    - `reaction` (`str`)
+
+    """
+
+    message_id: Identifier
+    user_id: Identifier
+    conversation_id: Identifier
+    reaction: str
 
 
 class ReportErrorRequest(BaseRequest):
@@ -195,6 +229,7 @@ class SettingsResponse(BaseModel):
     enable_image_comprehension: Optional[bool] = None
     enforce_author_role_alternation: Optional[bool] = None
     enable_multi_bot_chat_prompting: Optional[bool] = None
+    custom_rate_card: Optional[str] = None
 
 
 class AttachmentUploadResponse(BaseModel):
