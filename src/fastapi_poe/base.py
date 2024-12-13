@@ -661,9 +661,8 @@ class PoeBot:
         """
 
         if not self.access_key:
-            raise InvalidParameterError(
-                "access_key parameter is required if bot is not"
-                + " provided with an access_key when make_app is called."
+            raise CostRequestError(
+                "Please provide the bot access_key when make_app is called."
             )
 
         if not request.bot_query_id:
@@ -696,9 +695,8 @@ class PoeBot:
         """
 
         if not self.access_key:
-            raise InvalidParameterError(
-                "access_key parameter is required if bot is not"
-                + " provided with an access_key when make_app is called."
+            raise CostRequestError(
+                "Please provide the bot access_key when make_app is called."
             )
 
         if not request.bot_query_id:
