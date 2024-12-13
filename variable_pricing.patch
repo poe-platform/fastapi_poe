@@ -1,0 +1,47 @@
+diff --git a/src/fastapi_poe/base.py b/src/fastapi_poe/base.py
+index bd058a1..ee3f90f 100644
+--- a/src/fastapi_poe/base.py
++++ b/src/fastapi_poe/base.py
+@@ -14,6 +14,7 @@ from typing import (
+     BinaryIO,
+     Callable,
+     Dict,
++    List,
+     Optional,
+     Sequence,
+     Union,
+@@ -647,7 +648,7 @@ class PoeBot:
+     async def capture_cost(
+         self,
+         request: QueryRequest,
+-        amounts: Union[list[CostItem], CostItem],
++        amounts: Union[List[CostItem], CostItem],
+         access_key: Optional[str] = None,
+         base_url: str = "https://api.poe.com/",
+     ) -> None:
+@@ -679,6 +680,7 @@ class PoeBot:
+                     "access_key parameter is required if bot is not"
+                     + " provided with an access_key when make_app is called."
+                 )
++            request_access_key = self.access_key
+ 
+         if not request.bot_query_id:
+             raise InvalidParameterError(
+@@ -695,7 +697,7 @@ class PoeBot:
+     async def authorize_cost(
+         self,
+         request: QueryRequest,
+-        amounts: Union[list[CostItem], CostItem],
++        amounts: Union[List[CostItem], CostItem],
+         access_key: Optional[str] = None,
+         base_url: str = "https://api.poe.com/",
+     ) -> None:
+@@ -741,7 +743,7 @@ class PoeBot:
+             raise InsufficientFundError()
+ 
+     async def _cost_requests_inner(
+-        self, amounts: Union[list[CostItem], CostItem], access_key: str, url: str
++        self, amounts: Union[List[CostItem], CostItem], access_key: str, url: str
+     ) -> bool:
+         amounts = [amounts] if isinstance(amounts, CostItem) else amounts
+         amounts = [amount.model_dump() for amount in amounts]

@@ -197,9 +197,7 @@ class PoeBot:
             async for event in self.get_response(request):
                 yield event
         except InsufficientFundError:
-            yield ErrorResponse(
-                allow_retry=True, error_type="insufficient_fund", text=""
-            )
+            yield ErrorResponse(error_type="insufficient_fund", text="")
 
     async def get_settings(self, setting: SettingsRequest) -> SettingsResponse:
         """
@@ -662,9 +660,7 @@ class PoeBot:
 
         """
 
-        if self.access_key:
-            request_access_key = self.access_key
-        else:
+        if not self.access_key:
             raise InvalidParameterError(
                 "access_key parameter is required if bot is not"
                 + " provided with an access_key when make_app is called."
@@ -677,7 +673,7 @@ class PoeBot:
 
         url = f"{base_url}bot/cost/{request.bot_query_id}/capture"
         result = await self._cost_requests_inner(
-            amounts=amounts, access_key=request_access_key, url=url
+            amounts=amounts, access_key=self.access_key, url=url
         )
         if not result:
             raise InsufficientFundError()
@@ -699,9 +695,7 @@ class PoeBot:
 
         """
 
-        if self.access_key:
-            request_access_key = self.access_key
-        else:
+        if not self.access_key:
             raise InvalidParameterError(
                 "access_key parameter is required if bot is not"
                 + " provided with an access_key when make_app is called."
@@ -714,7 +708,7 @@ class PoeBot:
 
         url = f"{base_url}bot/cost/{request.bot_query_id}/authorize"
         result = await self._cost_requests_inner(
-            amounts=amounts, access_key=request_access_key, url=url
+            amounts=amounts, access_key=self.access_key, url=url
         )
         if not result:
             raise InsufficientFundError()
