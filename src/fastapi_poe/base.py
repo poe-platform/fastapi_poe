@@ -9,6 +9,7 @@ import warnings
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import (
+    Any,
     AsyncIterable,
     Awaitable,
     BinaryIO,
@@ -330,7 +331,8 @@ class PoeBot:
         filename: Optional[str] = None,
         content_type: Optional[str] = None,
         is_inline: bool = False,
-    ) -> AttachmentUploadResponse: ...
+    ) -> AttachmentUploadResponse:
+        ...
 
     # This overload requires all parameters to be passed as keywords
     @overload
@@ -344,7 +346,8 @@ class PoeBot:
         filename: Optional[str] = None,
         content_type: Optional[str] = None,
         is_inline: bool = False,
-    ) -> AttachmentUploadResponse: ...
+    ) -> AttachmentUploadResponse:
+        ...
 
     async def post_message_attachment(
         self,
@@ -753,8 +756,14 @@ class PoeBot:
             raise
 
     @staticmethod
-    def text_event(text: str) -> ServerSentEvent:
-        return ServerSentEvent(data=json.dumps({"text": text}), event="text")
+    def text_event(
+        text: str, data: Optional[Dict[str, Any]] = dict()
+    ) -> ServerSentEvent:
+        return ServerSentEvent(
+            text=text,
+            data=data,
+            event="text",
+        )
 
     @staticmethod
     def replace_response_event(text: str) -> ServerSentEvent:
@@ -871,7 +880,7 @@ class PoeBot:
                 elif event.is_replace_response:
                     yield self.replace_response_event(event.text)
                 else:
-                    yield self.text_event(event.text)
+                    yield self.text_event(event.text, event.data)
         except Exception as e:
             logger.exception("Error responding to query")
             yield self.error_event(
