@@ -9,19 +9,14 @@ import uvicorn
 import requests
 import tempfile
 from clientstorage import get_clients, ClientStorage
-
+from pydantic import BaseModel, AnyHttpUrl
 
 app = FastAPI()
-concated= ""
-# router = APIRouter()
-# router.add_api_route('/api/v2/hello-world', 
-# endpoint = HelloWorld().read_hello, methods=["GET"])
-# app.include_router(router)
 
-origins =["*"]
+origins = ["*"]
 
 expose_headers = [
-	"Access-Control-Allow-Origin"
+    "Access-Control-Allow-Origin"
 ]
 
 app.add_middleware(
@@ -29,12 +24,9 @@ app.add_middleware(
     allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],  # Allow all HTTP methods (GET, POST, PUT, DELETE, etc.)
-    allow_headers=["*"],  # Allow all headers
+    allow_headers=["*"],    # Allow all headers
     expose_headers=expose_headers
 )
-
-
-from pydantic import BaseModel, AnyHttpUrl
 
 @app.get('/health')
 def health():
@@ -45,56 +37,56 @@ class Item(BaseModel):
     apikey: str
     request: str
 
-
 @app.post("/upload/video/by_url")
-async def video_upload(sessionid: str = Form(...),
-                       url: str = Form(...),
-                       caption: str = Form(...),
-                       thumbnail: Optional[UploadFile] = File(None),
-                       clients: ClientStorage = Depends(get_clients)
-                       ):
-    """Upload photo by URL and configure to feed
-    """
+async def video_upload(
+    sessionid: str = Form(...),
+    url: str = Form(...),
+    caption: str = Form(...),
+    thumbnail: Optional[UploadFile] = File(None),
+    clients: ClientStorage = Depends(get_clients)
+):
+    """Upload video by URL and configure to feed"""
     cl = clients.get(sessionid)
-    
+
     content = requests.get(url).content
     if thumbnail is not None:
         thumb = await thumbnail.read()
         return await video_upload_post(
-            cl, content, caption=caption,
-            thumbnail=thumb)
-    return await video_upload_post(
-        cl, content, caption=caption)
+            cl, content, caption=caption, thumbnail=thumb
+        )
+    return await video_upload_post(cl, content, caption=caption)
 
-
-async def photo_upload_post(cl, content : bytes, **kwargs):
+async def photo_upload_post(cl, content: bytes, **kwargs):
     with tempfile.NamedTemporaryFile(suffix='.jpg') as fp:
         fp.write(content)
+        fp.flush()  # Ensure data is written to disk
         return cl.photo_upload(fp.name, **kwargs)
-    
-async def video_upload_post(cl, content, **kwargs):
+
+async def video_upload_post(cl, content: bytes, **kwargs):
     with tempfile.NamedTemporaryFile(suffix='.mp4') as fp:
         fp.write(content)
+        fp.flush()  # Ensure data is written to disk
         return cl.video_upload(fp.name, **kwargs)
 
 @app.post("/instagram/login")
-async def auth_login(username: str = Form(...),
-                     password: str = Form(...),
-                     verification_code: Optional[str] = Form(""),
-                     proxy: Optional[str] = Form(""),
-                     locale: Optional[str] = Form(""),
-                     timezone: Optional[str] = Form(""),
-                     clients: ClientStorage = Depends(get_clients)) -> str:
-    """Login by username and password with 2FA
-    """
+async def auth_login(
+    username: str = Form(...),
+    password: str = Form(...),
+    verification_code: Optional[str] = Form(""),
+    proxy: Optional[str] = Form(""),
+    locale: Optional[str] = Form(""),
+    timezone: Optional[str] = Form(""),
+    clients: ClientStorage = Depends(get_clients)
+) -> str:
+    """Login by username and password with 2FA"""
     cl = clients.client()
-    if proxy != "":
+    if proxy:
         cl.set_proxy(proxy)
 
-    if locale != "":
+    if locale:
         cl.set_locale(locale)
 
-    if timezone != "":
+    if timezone:
         cl.set_timezone_offset(timezone)
 
     result = cl.login(
@@ -107,103 +99,99 @@ async def auth_login(username: str = Form(...),
         return cl.sessionid
     return result
 
-
-
 @app.post("/upload/by_url")
-async def photo_upload(sessionid: str = Form(...),
-                       url: AnyHttpUrl = Form(...),
-                       caption: str = Form(...),
-                       clients: ClientStorage = Depends(get_clients)
-                       ) -> str:
-    """Upload photo and configure to feed
-    """
+async def photo_upload(
+    sessionid: str = Form(...),
+    url: AnyHttpUrl = Form(...),
+    caption: str = Form(...),
+    clients: ClientStorage = Depends(get_clients)
+) -> str:
+    """Upload photo and configure to feed"""
     cl = clients.get(sessionid)
-    
+
     content = requests.get(url).content
     await photo_upload_post(
-        cl, content,
-        caption=caption)
+        cl, content, caption=caption
+    )
     return "success"
 
-
-
 @app.post("/instagram/publish")
-async def upload_media(image: UploadFile = File(...),
-                       sessionid: str = Form(...),
-                       caption: str = Form(...),
-                       clients: ClientStorage = Depends(get_clients)):
-    
+async def upload_media(
+    image: UploadFile = File(...),
+    sessionid: str = Form(...),
+    caption: str = Form(...),
+    clients: ClientStorage = Depends(get_clients)
+):
+    """Publish media to Instagram"""
     cl = clients.get(sessionid)
-    #cl.login(item.account, item.password)
     contents = await image.read()
 
     try:
         await photo_upload_post(cl, contents, caption=caption)
     except Exception:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-            detail='There was an error uploading the file')
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail='There was an error uploading the file'
+        )
     finally:
         await image.close()
 
-    # media = cl.photo_upload(imagepath, caption, 
-    # extra_data={
-    #     "custom_accessibility_caption": "alt text example",
-    #     "like_and_view_counts_disabled": 1,
-    #     "disable_comments": 1,
-    # })
-
     return JSONResponse(content="success", status_code=201)
-
 
 @app.post("/liama")
 async def call_liama(item: Item):
-    global concated # 전역변수 사용
-    await concat_message(item.apikey, item.request, "Llama-2-13b")
-    
+    """Call Llama-2-13b Bot"""
+    concated = await concat_message(item.apikey, item.request, "Llama-2-13b")
     return JSONResponse(content=concated, status_code=201)
 
 @app.post("/call/{botname}")
-async def call_liama(botname: str, item: Item):
-    global concated # 전역변수 사용
-    await concat_message(item.apikey, item.request, botname)
-    
+async def call_bot_endpoint(botname: str, item: Item):
+    """Call a specified Bot"""
+    concated = await concat_message(item.apikey, item.request, botname)
     return JSONResponse(content=concated, status_code=201)
-
 
 @app.get("/")
 async def root():
-    return JSONResponse(content={"message": "Hello world!"}, status_code=201)
+    """Root endpoint"""
+    return JSONResponse(content={"message": "Hello world!"}, status_code=200)
 
 @app.get("/gpt3")
 async def call_gpt3(request: str, apikey: str):
-    global concated # 전역변수 사용
-
-    await concat_message(apikey, request, "GPT-3.5-Turbo")
+    """Call GPT-3.5-Turbo Bot"""
+    concated = await concat_message(apikey, request, "GPT-3.5-Turbo")
     return {"message": concated}
 
 @app.get("/gpt4/{request}")
 async def call_gpt4(request: str, apikey: str):
-    global concated # 전역변수 사용
-
-    await concat_message(apikey, request, "GPT-4.0")
+    """Call GPT-4.0 Bot"""
+    concated = await concat_message(apikey, request, "GPT-4.0")
     return {"message": concated}
 
 @app.get("/bot/{botname}")
-async def call_bot(botname: str, request: str, apikey: str):
-    global concated # use global variable
-
-    await concat_message(apikey, request, botname)
+async def call_specific_bot(botname: str, request: str, apikey: str):
+    """Call a specific Bot by name"""
+    concated = await concat_message(apikey, request, botname)
     return {"message": concated}
 
-async def concat_message(apikey, request, botname):
-    global concated # use global variable
-    concated= "" # 초기화
+async def concat_message(apikey: str, request: str, botname: str) -> str:
+    """
+    Concatenate messages from the bot response.
 
+    Args:
+        apikey (str): API key for authentication.
+        request (str): User request message.
+        botname (str): Name of the bot to interact with.
+
+    Returns:
+        str: The concatenated response from the bot.
+    """
+    concated = ""
     message = ProtocolMessage(role="user", content=request)
-    async for partial in get_bot_response(messages=[message], bot_name=botname, api_key=apikey): 
-        #print(partial.text, end='')
-        concated = concated + partial.text
+    
+    async for partial in get_bot_response(messages=[message], bot_name=botname, api_key=apikey):
+        concated += partial.text
+    
+    return concated
 
 if __name__ == "__main__":
-   uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
-   #test_endpoint()
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
