@@ -10,6 +10,7 @@ import requests
 import tempfile
 from clientstorage import get_clients, ClientStorage
 from pydantic import BaseModel, AnyHttpUrl
+import openai
 
 app = FastAPI()
 
@@ -172,6 +173,24 @@ async def call_specific_bot(botname: str, request: str, apikey: str):
     """Call a specific Bot by name"""
     concated = await concat_message(apikey, request, botname)
     return {"message": concated}
+
+
+@app.get("/openai/{botname}")
+async def call_specific_bot(botname: str, request: str, apikey: str):
+    openai.api_key = apikey
+    response = openai.ChatCompletion.create(
+    model=botname,
+    messages=[
+        {"role": "system", "content": "당신은 친절한 한국어 비서입니다."},
+        {"role": "user", "content": request}
+    ],
+    max_tokens=100
+    )
+
+
+
+
+
 
 async def concat_message(apikey: str, request: str, botname: str) -> str:
     """
