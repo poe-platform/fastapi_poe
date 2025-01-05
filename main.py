@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, APIRouter, File, UploadFile, Depends, Form, status
-from typing import Optional, Generator
+from typing import Optional, Generator, AsyncGenerator
 import uvicorn
 import requests
 import tempfile
@@ -176,16 +176,32 @@ async def call_specific_bot(botname: str, request: str, apikey: str):
 
 
 @app.get("/openai/{botname}")
-async def call_specific_bot(botname: str, request: str, apikey: str):
-    openai.api_key = apikey
-    response = openai.ChatCompletion.create(
-    model=botname,
-    messages=[
-        {"role": "system", "content": "당신은 친절한 한국어 비서입니다."},
-        {"role": "user", "content": request}
-    ],
-    max_tokens=100
-    )
+async def call_openai_bot(botname: str, request: str, apikey: str):
+    """
+    Endpoint to interact with OpenAI's ChatCompletion API.
+
+    Args:
+        botname (str): The model name to use (e.g., 'gpt-3.5-turbo').
+        request (str): The user's input message.
+        apikey (str): OpenAI API key.
+
+    Returns:
+        JSONResponse: The concatenated response from the bot.
+    """
+    try:
+        # Obtain the async generator for partial messages
+        partial_gen = openai_partial_messages(apikey, botname, request)
+        
+        # Concatenate the partial messages into a single string
+        concated = await concat_message(partial_gen)
+        
+        return {"message": concated}
+    except HTTPException as http_exc:
+        # Propagate HTTP exceptions
+        raise http_exc
+    except Exception as e:
+        print(f"Unexpected error in call_openai_bot: {e}")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
 
 
 
