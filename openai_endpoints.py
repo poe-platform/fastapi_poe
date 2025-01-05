@@ -177,7 +177,7 @@ async def call_openai_bot_with_function(botname: str, payload: FunctionCallReque
     return JSONResponse(content={"message": model_reply, "function_response": function_response}, status_code=200)
 
 
-@router.get("/openai/{botname}")
+@router.post("/openai/{botname}")
 async def call_openai_bot(botname: str, request: str, apikey: str):
     """
     Endpoint to interact with OpenAI's ChatCompletion API.
