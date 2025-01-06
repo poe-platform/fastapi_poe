@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from fastapi import Request
 from pydantic import BaseModel, ConfigDict, Field
@@ -67,8 +67,8 @@ class ProtocolMessage(BaseModel):
     - `content_type` (`ContentType="text/markdown"`)
     - `timestamp` (`int = 0`)
     - `message_id` (`str = ""`)
-    - `feedback` (`List[MessageFeedback] = []`)
-    - `attachments` (`List[Attachment] = []`)
+    - `feedback` (`list[MessageFeedback] = []`)
+    - `attachments` (`list[Attachment] = []`)
 
     """
 
@@ -78,8 +78,8 @@ class ProtocolMessage(BaseModel):
     content_type: ContentType = "text/markdown"
     timestamp: int = 0
     message_id: str = ""
-    feedback: List[MessageFeedback] = Field(default_factory=list)
-    attachments: List[Attachment] = Field(default_factory=list)
+    feedback: list[MessageFeedback] = Field(default_factory=list)
+    attachments: list[Attachment] = Field(default_factory=list)
 
 
 class RequestContext(BaseModel):
@@ -103,7 +103,7 @@ class QueryRequest(BaseRequest):
 
     Request parameters for a query request.
     #### Fields:
-    - `query` (`List[ProtocolMessage]`): list of message representing the current state of the chat.
+    - `query` (`list[ProtocolMessage]`): list of message representing the current state of the chat.
     - `user_id` (`Identifier`): an anonymized identifier representing a user. This is persistent
     for subsequent requests from that user.
     - `conversation_id` (`Identifier`): an identifier representing a chat. This is
@@ -113,14 +113,14 @@ class QueryRequest(BaseRequest):
     on Poe.
     - `temperature` (`float | None = None`): Temperature input to be used for model inference.
     - `skip_system_prompt` (`bool = False`): Whether to use any system prompting or not.
-    - `logit_bias` (`Dict[str, float] = {}`)
-    - `stop_sequences` (`List[str] = []`)
+    - `logit_bias` (`dict[str, float] = {}`)
+    - `stop_sequences` (`list[str] = []`)
     - `language_code` (`str = "en"`): BCP 47 language code of the user's client.
     - `bot_query_id` (`str = ""`): an identifier representing a bot query.
 
     """
 
-    query: List[ProtocolMessage]
+    query: list[ProtocolMessage]
     user_id: Identifier
     conversation_id: Identifier
     message_id: Identifier
@@ -129,8 +129,8 @@ class QueryRequest(BaseRequest):
     access_key: str = "<missing>"
     temperature: Optional[float] = None
     skip_system_prompt: bool = False
-    logit_bias: Dict[str, float] = {}
-    stop_sequences: List[str] = []
+    logit_bias: dict[str, float] = {}
+    stop_sequences: list[str] = []
     language_code: str = "en"
     bot_query_id: Identifier = ""
 
@@ -186,12 +186,12 @@ class ReportErrorRequest(BaseRequest):
     Request parameters for a report_error request.
     #### Fields:
     - `message` (`str`)
-    - `metadata` (`Dict[str, Any]`)
+    - `metadata` (`dict[str, Any]`)
 
     """
 
     message: str
-    metadata: Dict[str, Any]
+    metadata: dict[str, Any]
 
 
 class SettingsResponse(BaseModel):
@@ -199,7 +199,7 @@ class SettingsResponse(BaseModel):
 
     An object representing your bot's response to a settings object.
     #### Fields:
-    - `server_bot_dependencies` (`Dict[str, int] = {}`): Information about other bots that your bot
+    - `server_bot_dependencies` (`dict[str, int] = {}`): Information about other bots that your bot
     uses. This is used to facilitate the Bot Query API.
     - `allow_attachments` (`bool = False`): Whether to allow users to upload attachments to your
     bot.
@@ -222,7 +222,7 @@ class SettingsResponse(BaseModel):
 
     context_clear_window_secs: Optional[int] = None  # deprecated
     allow_user_context_clear: Optional[bool] = None  # deprecated
-    server_bot_dependencies: Dict[str, int] = Field(default_factory=dict)
+    server_bot_dependencies: dict[str, int] = Field(default_factory=dict)
     allow_attachments: Optional[bool] = None
     introduction_message: Optional[str] = None
     expand_text_attachments: Optional[bool] = None
@@ -247,7 +247,7 @@ class PartialResponse(BaseModel):
     - `text` (`str`): The actual text you want to display to the user. Note that this should solely
     be the text in the next token since Poe will automatically concatenate all tokens before
     displaying the response to the user.
-    - `data` (`Optional[Dict[str, Any]]`): Used to send arbitrary json data to Poe. This is
+    - `data` (`Optional[dict[str, Any]]`): Used to send arbitrary json data to Poe. This is
     currently only used for OpenAI function calling.
     - `is_suggested_reply` (`bool = False`): Setting this to true will create a suggested reply with
     the provided text value.
@@ -269,7 +269,7 @@ class PartialResponse(BaseModel):
 
     """
 
-    data: Optional[Dict[str, Any]] = None
+    data: Optional[dict[str, Any]] = None
     """Used when a bot returns the json event."""
 
     raw_response: object = None
@@ -338,8 +338,8 @@ class ToolDefinition(BaseModel):
     class FunctionDefinition(BaseModel):
         class ParametersDefinition(BaseModel):
             type: str
-            properties: Dict[str, object]
-            required: Optional[List[str]] = None
+            properties: dict[str, object]
+            required: Optional[list[str]] = None
 
         name: str
         description: str

@@ -13,7 +13,7 @@ import inspect
 import sys
 import types
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional, Union
+from typing import Callable, Optional, Union
 
 sys.path.append("../src")
 import fastapi_poe
@@ -32,7 +32,7 @@ class DocumentationData:
     name: str
     docstring: Optional[str]
     data_type: str
-    children: List = field(default_factory=lambda: [])
+    children: list = field(default_factory=lambda: [])
 
 
 def _unwrap_func(func_obj: Union[staticmethod, Callable]) -> Callable:
@@ -43,8 +43,8 @@ def _unwrap_func(func_obj: Union[staticmethod, Callable]) -> Callable:
 
 
 def get_documentation_data(
-    *, module: types.ModuleType, documented_items: List[str]
-) -> Dict[str, DocumentationData]:
+    *, module: types.ModuleType, documented_items: list[str]
+) -> dict[str, DocumentationData]:
     data_dict = {}
     for name, obj in inspect.getmembers(module):
         if (
@@ -75,8 +75,8 @@ def get_documentation_data(
 
 def generate_documentation(
     *,
-    data_dict: Dict[str, DocumentationData],
-    documented_items: List[str],
+    data_dict: dict[str, DocumentationData],
+    documented_items: list[str],
     output_filename: str,
 ) -> None:
     # reset the file first

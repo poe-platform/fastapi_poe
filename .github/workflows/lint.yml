@@ -42,13 +42,7 @@ jobs:
     strategy:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
-        exclude: # Apple Silicon ARM64 does not support Python < v3.8
-          - python-version: "3.7"
-            os: macos-latest
-        include: # So run those legacy versions on Intel CPUs
-          - python-version: "3.7"
-            os: macos-13
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
