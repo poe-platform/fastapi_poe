@@ -14,7 +14,7 @@ authors = [
 ]
 description = "A demonstration of the Poe protocol using FastAPI"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: Apache Software License",
@@ -34,10 +34,10 @@ dependencies = [
 "Homepage" = "https://creator.poe.com/"
 
 [tool.pyright]
-pythonVersion = "3.7"
+pythonVersion = "3.9"
 
 [tool.black]
-target-version = ['py37']
+target-version = ['py39']
 skip-magic-trailing-comma = true
 
 [tool.ruff]
@@ -78,4 +78,4 @@ lint.ignore = [
 ]
 
 line-length = 100
-target-version = "py37"
+target-version = "py39"
