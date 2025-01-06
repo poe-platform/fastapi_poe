@@ -26,7 +26,8 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sse_starlette.sse import EventSourceResponse, ServerSentEvent
+from sse_starlette.event import ServerSentEvent
+from sse_starlette.sse import EventSourceResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import Message
 from typing_extensions import deprecated, overload
