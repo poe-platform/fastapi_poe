@@ -325,6 +325,7 @@ class PoeBot:
         message_id: Identifier,
         *,
         download_url: Optional[str] = None,
+        download_filename: Optional[str] = None,
         file_data: Optional[Union[bytes, BinaryIO]] = None,
         filename: Optional[str] = None,
         content_type: Optional[str] = None,
@@ -338,6 +339,7 @@ class PoeBot:
         *,
         message_id: Identifier,
         download_url: Optional[str] = None,
+        download_filename: Optional[str] = None,
         file_data: Optional[Union[bytes, BinaryIO]] = None,
         filename: Optional[str] = None,
         content_type: Optional[str] = None,
@@ -350,6 +352,7 @@ class PoeBot:
         message_id: Optional[Identifier] = None,
         *,
         download_url: Optional[str] = None,
+        download_filename: Optional[str] = None,
         file_data: Optional[Union[bytes, BinaryIO]] = None,
         filename: Optional[str] = None,
         content_type: Optional[str] = None,
@@ -366,6 +369,8 @@ class PoeBot:
         - `access_key` (`str`): The access_key corresponding to your bot. This is needed to ensure
         that file upload requests are coming from an authorized source.
         - `download_url` (`Optional[str] = None`): A url to the file to be attached to the message.
+        - `download_filename` (`Optional[str] = None`): A filename to be used when storing the
+        downloaded attachment. If not set, the filename from the `download_url` is used.
         - `file_data` (`Optional[Union[bytes, BinaryIO]] = None`): The contents of the file to be
         uploaded. This should be a bytes-like or file object.
         - `filename` (`Optional[str] = None`): The name of the file to be attached.
@@ -384,6 +389,7 @@ class PoeBot:
                 access_key=access_key,
                 message_id=message_id,
                 download_url=download_url,
+                download_filename=download_filename,
                 file_data=file_data,
                 filename=filename,
                 content_type=content_type,
@@ -406,6 +412,7 @@ class PoeBot:
         *,
         access_key: Optional[str] = None,
         download_url: Optional[str] = None,
+        download_filename: Optional[str] = None,
         file_data: Optional[Union[bytes, BinaryIO]] = None,
         filename: Optional[str] = None,
         content_type: Optional[str] = None,
@@ -443,6 +450,8 @@ class PoeBot:
                         "is_inline": is_inline,
                         "download_url": download_url,
                     }
+                    if download_filename:
+                        data["download_filename"] = download_filename
                     request = httpx.Request("POST", url, data=data, headers=headers)
                 elif file_data and filename:
                     data = {"message_id": message_id, "is_inline": is_inline}
