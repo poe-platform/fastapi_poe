@@ -441,7 +441,11 @@ async def _get_tool_calls(
         retry_sleep_time=retry_sleep_time,
         base_url=base_url,
     ):
-        if message.data is not None:
+        if (
+            message.data is not None
+            and "choices" in message.data
+            and message.data["choices"]
+        ):
             finish_reason = message.data["choices"][0]["finish_reason"]
             if finish_reason is None:
                 try:
