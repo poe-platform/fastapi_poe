@@ -7,18 +7,9 @@ import os
 import sys
 import warnings
 from collections import defaultdict
+from collections.abc import AsyncIterable, Awaitable, Sequence
 from dataclasses import dataclass
-from typing import (
-    AsyncIterable,
-    Awaitable,
-    BinaryIO,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Sequence,
-    Union,
-)
+from typing import BinaryIO, Callable, Optional, Union
 
 import httpx
 import httpx_sse
@@ -656,7 +647,7 @@ class PoeBot:
     async def capture_cost(
         self,
         request: QueryRequest,
-        amounts: Union[List[CostItem], CostItem],
+        amounts: Union[list[CostItem], CostItem],
         base_url: str = "https://api.poe.com/",
     ) -> None:
         """
@@ -666,7 +657,7 @@ class PoeBot:
 
         #### Parameters:
         - `request` (`QueryRequest`): The currently handlded QueryRequest object.
-        - `amounts` (`Union[List[CostItem], CostItem]`): The to be captured amounts.
+        - `amounts` (`Union[list[CostItem], CostItem]`): The to be captured amounts.
 
         """
 
@@ -690,7 +681,7 @@ class PoeBot:
     async def authorize_cost(
         self,
         request: QueryRequest,
-        amounts: Union[List[CostItem], CostItem],
+        amounts: Union[list[CostItem], CostItem],
         base_url: str = "https://api.poe.com/",
     ) -> None:
         """
@@ -700,7 +691,7 @@ class PoeBot:
 
         #### Parameters:
         - `request` (`QueryRequest`): The currently handlded QueryRequest object.
-        - `amounts` (`Union[List[CostItem], CostItem]`): The to be authorized amounts.
+        - `amounts` (`Union[list[CostItem], CostItem]`): The to be authorized amounts.
 
         """
 
@@ -722,15 +713,18 @@ class PoeBot:
             raise InsufficientFundError()
 
     async def _cost_requests_inner(
-        self, amounts: Union[List[CostItem], CostItem], access_key: str, url: str
+        self, amounts: Union[list[CostItem], CostItem], access_key: str, url: str
     ) -> bool:
         amounts = [amounts] if isinstance(amounts, CostItem) else amounts
         amounts_dicts = [amount.model_dump() for amount in amounts]
         data = {"amounts": amounts_dicts, "access_key": access_key}
         try:
-            async with httpx.AsyncClient(timeout=300) as client, httpx_sse.aconnect_sse(
-                client, method="POST", url=url, json=data
-            ) as event_source:
+            async with (
+                httpx.AsyncClient(timeout=300) as client,
+                httpx_sse.aconnect_sse(
+                    client, method="POST", url=url, json=data
+                ) as event_source,
+            ):
                 if event_source.response.status_code != 200:
                     error_pieces = [
                         json.loads(event.data).get("message", "")
@@ -799,7 +793,7 @@ class PoeBot:
         allow_retry: bool = True,
         error_type: Optional[str] = None,
     ) -> ServerSentEvent:
-        data: Dict[str, Union[bool, str]] = {"allow_retry": allow_retry}
+        data: dict[str, Union[bool, str]] = {"allow_retry": allow_retry}
         if text is not None:
             data["text"] = text
         if raw_response is not None:
