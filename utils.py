@@ -5,7 +5,8 @@ from typing import AsyncGenerator
 from fastapi_poe.types import ProtocolMessage
 from fastapi_poe.client import get_bot_response
 from fastapi import HTTPException
-import openai
+import os
+from openai import OpenAI
 
 async def concat_message(partial_gen: AsyncGenerator[str, None]) -> str:
     """
@@ -22,31 +23,39 @@ async def concat_message(partial_gen: AsyncGenerator[str, None]) -> str:
         concated += partial
     return concated
 
-async def openai_partial_messages(apikey: str, botname: str, request: str) -> AsyncGenerator[str, None]:
+from fastapi import HTTPException
+import asyncio
+from openai import OpenAI
+
+from fastapi import HTTPException
+import asyncio
+import openai  # Ensure you're using the official OpenAI Python library
+
+async def openai_full_message(request: str) -> str:
     """
-    Asynchronously stream partial messages from OpenAI's ChatCompletion API.
+    Asynchronously fetch a full response from OpenAI's ChatCompletion API.
 
     Args:
-        apikey (str): API key for OpenAI.
-        botname (str): Model name (e.g., 'gpt-3.5-turbo').
         request (str): User's request message.
 
-    Yields:
-        str: Partial response from the bot.
+    Returns:
+        str: Full response from the bot.
     """
-    openai.api_key = apikey
-
+    client = OpenAI(
+        api_key=os.environ.get("OPENAI_API_KEY"),  # This is the default and can be omitted
+    )
     try:
         # Run the blocking OpenAI API call in a separate thread to avoid blocking the event loop
         response = await asyncio.get_event_loop().run_in_executor(
             None,
-            lambda: openai.ChatCompletion.create(
-                model=botname,
+            lambda: client.chat.completions.create(
                 messages=[
-                    {"role": "user", "content": request}
+                    {
+                        "role": "user",
+                        "content": request,
+                    }
                 ],
-                max_tokens=100,
-                stream=True  # Enable streaming
+                model="gpt-4",  # Use the desired model, e.g., "gpt-3.5-turbo" or "gpt-4"
             )
         )
     except Exception as e:
@@ -54,15 +63,16 @@ async def openai_partial_messages(apikey: str, botname: str, request: str) -> As
         raise HTTPException(status_code=500, detail="Failed to connect to OpenAI API.")
 
     try:
-        # Iterate over the streamed response
-        for chunk in response:
-            if 'choices' in chunk:
-                delta = chunk['choices'][0]['delta']
-                if 'content' in delta:
-                    yield delta['content']
+        # Extract the content of the assistant's reply from the response
+        if 'choices' in response:
+            return response['choices'][0]['message']['content']
+        else:
+            raise HTTPException(status_code=500, detail="Unexpected response format from OpenAI API.")
     except Exception as e:
         print(f"Error processing OpenAI response: {e}")
         raise HTTPException(status_code=500, detail="Error processing the OpenAI response.")
+    
+
 
 async def get_poe_partial_messages(messages, bot_name: str, api_key: str) -> AsyncGenerator[str, None]:
     """
