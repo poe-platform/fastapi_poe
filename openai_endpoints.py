@@ -72,7 +72,9 @@ async def call_openai_bot(botname: str, payload: OpenAIRequest):
         raise HTTPException(status_code=500, detail="An unexpected error occurred.")
     
 
-
+# sample request: "What's the weather like in Paris today?"
+# sample json_param: "location": {"type": "string"}
+# sample function_name: get_weather
 @router.post("/openai/functioncall/{botname}")
 async def call_openai_bot_function_calling(botname: str, payload: FunctionCallRequest):
     
