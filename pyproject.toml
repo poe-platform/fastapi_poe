@@ -22,7 +22,7 @@ classifiers = [
 ]
 dependencies = [
     "fastapi",
-    "sse-starlette",
+    "sse-starlette>=2.2.1",
     "typing-extensions>=4.5.0",
     "uvicorn",
     "httpx",
