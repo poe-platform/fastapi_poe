@@ -48,6 +48,7 @@ from fastapi_poe.types import (
 )
 
 logger = logging.getLogger("uvicorn.default")
+POE_API_WEBSERVER_BASE_URL = "https://www.quora.com/poe_api/"
 
 
 class InvalidParameterError(Exception):
@@ -322,7 +323,7 @@ class PoeBot:
         filename: Optional[str] = None,
         content_type: Optional[str] = None,
         is_inline: bool = False,
-        base_url: str = "https://www.quora.com/poe_api/",
+        base_url: str = POE_API_WEBSERVER_BASE_URL,
     ) -> AttachmentUploadResponse: ...
 
     # This overload requires all parameters to be passed as keywords
@@ -337,7 +338,7 @@ class PoeBot:
         filename: Optional[str] = None,
         content_type: Optional[str] = None,
         is_inline: bool = False,
-        base_url: str = "https://www.quora.com/poe_api/",
+        base_url: str = POE_API_WEBSERVER_BASE_URL,
     ) -> AttachmentUploadResponse: ...
 
     async def post_message_attachment(
@@ -351,7 +352,7 @@ class PoeBot:
         filename: Optional[str] = None,
         content_type: Optional[str] = None,
         is_inline: bool = False,
-        base_url: str = "https://www.quora.com/poe_api/",
+        base_url: str = POE_API_WEBSERVER_BASE_URL,
     ) -> AttachmentUploadResponse:
         """
 
@@ -413,7 +414,7 @@ class PoeBot:
         filename: Optional[str] = None,
         content_type: Optional[str] = None,
         is_inline: bool = False,
-        base_url: str = "https://www.quora.com/poe_api/",
+        base_url: str = POE_API_WEBSERVER_BASE_URL,
     ) -> AttachmentUploadResponse:
         if self.access_key:
             if access_key:
