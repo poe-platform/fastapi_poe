@@ -48,6 +48,7 @@ from fastapi_poe.types import (
 )
 
 logger = logging.getLogger("uvicorn.default")
+POE_API_WEBSERVER_BASE_URL = "https://www.quora.com/poe_api/"
 
 
 class InvalidParameterError(Exception):
@@ -322,6 +323,7 @@ class PoeBot:
         filename: Optional[str] = None,
         content_type: Optional[str] = None,
         is_inline: bool = False,
+        base_url: str = POE_API_WEBSERVER_BASE_URL,
     ) -> AttachmentUploadResponse: ...
 
     # This overload requires all parameters to be passed as keywords
@@ -336,6 +338,7 @@ class PoeBot:
         filename: Optional[str] = None,
         content_type: Optional[str] = None,
         is_inline: bool = False,
+        base_url: str = POE_API_WEBSERVER_BASE_URL,
     ) -> AttachmentUploadResponse: ...
 
     async def post_message_attachment(
@@ -349,6 +352,7 @@ class PoeBot:
         filename: Optional[str] = None,
         content_type: Optional[str] = None,
         is_inline: bool = False,
+        base_url: str = POE_API_WEBSERVER_BASE_URL,
     ) -> AttachmentUploadResponse:
         """
 
@@ -386,6 +390,7 @@ class PoeBot:
                 filename=filename,
                 content_type=content_type,
                 is_inline=is_inline,
+                base_url=base_url,
             )
         )
         pending_tasks_for_message = self._pending_file_attachment_tasks.get(message_id)
@@ -409,6 +414,7 @@ class PoeBot:
         filename: Optional[str] = None,
         content_type: Optional[str] = None,
         is_inline: bool = False,
+        base_url: str = POE_API_WEBSERVER_BASE_URL,
     ) -> AttachmentUploadResponse:
         if self.access_key:
             if access_key:
@@ -427,7 +433,7 @@ class PoeBot:
                     + " provided with an access_key when make_app is called."
                 )
             attachment_access_key = access_key
-        url = "https://www.quora.com/poe_api/file_attachment_3RD_PARTY_POST"
+        url = f"{base_url}file_attachment_3RD_PARTY_POST"
 
         async with httpx.AsyncClient(timeout=120) as client:
             try:
