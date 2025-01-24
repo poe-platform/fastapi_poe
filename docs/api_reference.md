@@ -20,9 +20,8 @@ file output that mandate an `access_key` will not be available for your bot.
 content from attachments and insert them as messages into the conversation. This is set to
 `True`by default and we recommend leaving on since it allows your bot to comprehend attachments
 uploaded by users by default.
-- `concat_attachments_to_message` (`bool = False`): Deprecated. This was used to concatenate
-attachment content to the message body. This is now handled by `insert_attachment_messages`.
-This will be removed in a future release.
+- `concat_attachments_to_message` (`bool = False`): **DEPRECATED**: Please set
+`should_insert_attachment_messages` instead.
 
 ### `PoeBot.get_response`
 
@@ -96,6 +95,17 @@ from Poe. This is sent out when a user provides feedback on a response on your b
 - `context` (`RequestContext`): an object representing the current HTTP request.
 #### Returns: `None`
 
+### `PoeBot.on_reaction_with_context`
+
+Override this to record reaction from the user. This also includes the request context
+information.
+
+#### Parameters:
+- `reaction_request` (`ReportReactionRequest`): An object representing a reaction request
+from Poe. This is sent out when a user provides reaction on a response on your bot.
+- `context` (`RequestContext`): an object representing the current HTTP request.
+#### Returns: `None`
+
 ### `PoeBot.on_error`
 
 Override this to record errors from the Poe server.
@@ -125,12 +135,14 @@ Used to output an attachment in your bot's response.
 - `message_id` (`Identifier`): The message id associated with the current QueryRequest
 object. **Important**: This must be the request that is currently being handled by
 get_response. Attempting to attach files to previously handled requests will fail.
-- `access_key` (`str`): The access_key corresponding to your bot. This is needed to ensure
-that file upload requests are coming from an authorized source.
 - `download_url` (`Optional[str] = None`): A url to the file to be attached to the message.
+- `download_filename` (`Optional[str] = None`): A filename to be used when storing the
+downloaded attachment. If not set, the filename from the `download_url` is used.
 - `file_data` (`Optional[Union[bytes, BinaryIO]] = None`): The contents of the file to be
 uploaded. This should be a bytes-like or file object.
 - `filename` (`Optional[str] = None`): The name of the file to be attached.
+- `access_key` (`str`): **DEPRECATED**: Please set the access_key when creating the Bot
+object instead.
 #### Returns:
 - `AttachmentUploadResponse`
 
@@ -138,6 +150,8 @@ uploaded. This should be a bytes-like or file object.
 `filename`.
 
 ### `PoeBot.concat_attachment_content_to_message_body`
+
+**DEPRECATED**: This method is deprecated. Use `insert_attachment_messages` instead.
 
 Concatenate received attachment file content into the message body. This will be called
 by default if `concat_attachments_to_message` is set to `True` but can also be used
@@ -172,6 +186,28 @@ for LLMs that require role alternation between user and bot messages.
 #### Returns:
 - `Sequence[ProtocolMessage]`: the modified messages.
 
+### `PoeBot.capture_cost`
+
+Used to capture variable costs for monetized and eligible bot creators.
+Visit https://creator.poe.com/docs/creator-monetization for more information.
+
+#### Parameters:
+- `request` (`QueryRequest`): The currently handled QueryRequest object.
+- `amounts` (`Union[list[CostItem], CostItem]`): The to be captured amounts.
+
+#### Returns: `None`
+
+### `PoeBot.authorize_cost`
+
+Used to authorize a cost for monetized and eligible bot creators.
+Visit https://creator.poe.com/docs/creator-monetization for more information.
+
+#### Parameters:
+- `request` (`QueryRequest`): The currently handled QueryRequest object.
+- `amounts` (`Union[list[CostItem], CostItem]`): The to be authorized amounts.
+
+#### Returns: `None`
+
 
 
 ---
@@ -187,6 +223,9 @@ to host multiple bots on one server.
 read the POE_ACCESS_KEY environment variable. If that is not set, the server will
 refuse to start, unless `allow_without_key` is True. If multiple bots are provided,
 the access key must be provided as part of the bot object.
+- `bot_name` (`str = ""`): The name of the bot as it appears on poe.com.
+- `api_key` (`str = ""`): **DEPRECATED**: Please set the access_key when creating the Bot
+object instead.
 - `allow_without_key` (`bool = False`): If True, the server will start even if no access
 key is provided. Requests will not be checked against any key. If an access key is provided, it
 is still checked.
@@ -224,9 +263,9 @@ also includes information needed to identify the user for compute point usage.
 - `api_key` (`str = ""`): Your Poe API key, available at poe.com/api_key. You will need
 this in case you are trying to use this function from a script/shell. Note that if an `api_key`
 is provided, compute points will be charged on the account corresponding to the `api_key`.
-- tools: (`Optional[List[ToolDefinition]] = None`): An list of ToolDefinition objects describing
+- tools: (`Optional[list[ToolDefinition]] = None`): An list of ToolDefinition objects describing
 the functions you have. This is used for OpenAI function calling.
-- tool_executables: (`Optional[List[Callable]] = None`): An list of functions corresponding
+- tool_executables: (`Optional[list[Callable]] = None`): An list of functions corresponding
 to the ToolDefinitions. This is used for OpenAI function calling.
 
 
@@ -237,7 +276,7 @@ to the ToolDefinitions. This is used for OpenAI function calling.
 
 Use this function to invoke another Poe bot from your shell.
 #### Parameters:
-- `messages` (`List[ProtocolMessage]`): A list of messages representing your conversation.
+- `messages` (`list[ProtocolMessage]`): A list of messages representing your conversation.
 - `bot_name` (`str`): The bot that you want to invoke.
 - `api_key` (`str`): Your Poe API key. This is available at: [poe.com/api_key](https://poe.com/api_key)
 
@@ -266,7 +305,7 @@ provided, compute points will be charged on the account corresponding to the `ap
 
 Request parameters for a query request.
 #### Fields:
-- `query` (`List[ProtocolMessage]`): list of message representing the current state of the chat.
+- `query` (`list[ProtocolMessage]`): list of message representing the current state of the chat.
 - `user_id` (`Identifier`): an anonymized identifier representing a user. This is persistent
 for subsequent requests from that user.
 - `conversation_id` (`Identifier`): an identifier representing a chat. This is
@@ -274,11 +313,12 @@ persistent for subsequent request for that chat.
 - `message_id` (`Identifier`): an identifier representing a message.
 - `access_key` (`str = "<missing>"`): contains the access key defined when you created your bot
 on Poe.
-- `temperature` (`float = 0.7`): Temperature input to be used for model inference.
+- `temperature` (`float | None = None`): Temperature input to be used for model inference.
 - `skip_system_prompt` (`bool = False`): Whether to use any system prompting or not.
-- `logit_bias` (`Dict[str, float] = {}`)
-- `stop_sequences` (`List[str] = []`)
-- `language_code` (`str` = "en"`): BCP 47 language code of the user's client.
+- `logit_bias` (`dict[str, float] = {}`)
+- `stop_sequences` (`list[str] = []`)
+- `language_code` (`str = "en"`): BCP 47 language code of the user's client.
+- `bot_query_id` (`str = ""`): an identifier representing a bot query.
 
 
 
@@ -294,8 +334,8 @@ A message as used in the Poe protocol.
 - `content_type` (`ContentType="text/markdown"`)
 - `timestamp` (`int = 0`)
 - `message_id` (`str = ""`)
-- `feedback` (`List[MessageFeedback] = []`)
-- `attachments` (`List[Attachment] = []`)
+- `feedback` (`list[MessageFeedback] = []`)
+- `attachments` (`list[Attachment] = []`)
 
 
 
@@ -310,7 +350,7 @@ Representation of a (possibly partial) response from a bot. Yield this in
 - `text` (`str`): The actual text you want to display to the user. Note that this should solely
 be the text in the next token since Poe will automatically concatenate all tokens before
 displaying the response to the user.
-- `data` (`Optional[Dict[str, Any]]`): Used to send arbitrary json data to Poe. This is
+- `data` (`Optional[dict[str, Any]]`): Used to send arbitrary json data to Poe. This is
 currently only used for OpenAI function calling.
 - `is_suggested_reply` (`bool = False`): Setting this to true will create a suggested reply with
 the provided text value.
@@ -362,7 +402,7 @@ might get updated in the future.
 
 An object representing your bot's response to a settings object.
 #### Fields:
-- `server_bot_dependencies` (`Dict[str, int] = {}`): Information about other bots that your bot
+- `server_bot_dependencies` (`dict[str, int] = {}`): Information about other bots that your bot
 uses. This is used to facilitate the Bot Query API.
 - `allow_attachments` (`bool = False`): Whether to allow users to upload attachments to your
 bot.
@@ -401,7 +441,7 @@ Request parameters for a report_feedback request.
 Request parameters for a report_error request.
 #### Fields:
 - `message` (`str`)
-- `metadata` (`Dict[str, Any]`)
+- `metadata` (`dict[str, Any]`)
 
 
 
