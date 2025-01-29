@@ -80,6 +80,7 @@ class ProtocolMessage(BaseModel):
     message_id: str = ""
     feedback: list[MessageFeedback] = Field(default_factory=list)
     attachments: list[Attachment] = Field(default_factory=list)
+    metadata: Optional[str] = None
 
 
 class RequestContext(BaseModel):
@@ -235,6 +236,23 @@ class SettingsResponse(BaseModel):
 class AttachmentUploadResponse(BaseModel):
     inline_ref: Optional[str]
     attachment_url: Optional[str]
+
+
+class DataResponse(BaseModel):
+    """
+
+    A response that contains arbitrary data to attach to the bot response.
+    This data can be retrieved in later requests to the bot within the same chat.
+    Note that only the final DataResponse object in the stream will be attached to the bot response.
+
+    #### Fields:
+    - `metadata` (`str`): String of data to attach to the bot response.
+
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    metadata: str
 
 
 class PartialResponse(BaseModel):
