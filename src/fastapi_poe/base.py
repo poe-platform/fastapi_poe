@@ -583,7 +583,10 @@ class PoeBot:
                     text_attachment_messages.append(
                         ProtocolMessage(role="user", content=url_attachment_content)
                     )
-                elif "text" in attachment.content_type:
+                elif (
+                    "text" in attachment.content_type
+                    or attachment.content_type == "application/pdf"
+                ):
                     text_attachment_content = TEXT_ATTACHMENT_TEMPLATE.format(
                         attachment_name=attachment.name,
                         attachment_parsed_content=attachment.parsed_content,
@@ -592,8 +595,15 @@ class PoeBot:
                         ProtocolMessage(role="user", content=text_attachment_content)
                     )
                 elif "image" in attachment.content_type:
-                    parsed_content_filename = attachment.parsed_content.split("***")[0]
-                    parsed_content_text = attachment.parsed_content.split("***")[1]
+                    try:
+                        # Poe currently sends analysis in the format of filename***analysis
+                        parsed_content_filename, parsed_content_text = (
+                            attachment.parsed_content.split("***", 1)
+                        )
+                    except ValueError:
+                        # If the format is not filename***analysis, use the attachment filename
+                        parsed_content_filename = attachment.name
+                        parsed_content_text = attachment.parsed_content
                     image_attachment_content = IMAGE_VISION_ATTACHMENT_TEMPLATE.format(
                         filename=parsed_content_filename,
                         parsed_image_description=parsed_content_text,
