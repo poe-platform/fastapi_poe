@@ -72,6 +72,9 @@ class TestPoeBot:
             message_id="456",
         )
 
+        assert (
+            mock_image_attachment.parsed_content
+        )  # satisfy pyright so split() works below
         expected_protocol_messages = [
             message_without_attachments,
             ProtocolMessage(
