@@ -584,7 +584,7 @@ class PoeBot:
                         ProtocolMessage(role="user", content=url_attachment_content)
                     )
                 elif (
-                    "text" in attachment.content_type
+                    attachment.content_type.startswith("text/")
                     or attachment.content_type == "application/pdf"
                 ):
                     text_attachment_content = TEXT_ATTACHMENT_TEMPLATE.format(
