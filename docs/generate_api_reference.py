@@ -3,7 +3,8 @@
 - To generate reference documentation:
   - Add/update docstrings in the codebase. If you are adding a new class/function, add
     it's name to `documented_items` in `docs/generate_api_reference.py`
-  - run `python generate_api_reference.py`
+  - Install local version of fastapi_poe: `pip install -e .`
+  - run `python3 generate_api_reference.py`
   - [Internal only] Copy the contents of `api_reference.md` to the reference page in
     README.
 

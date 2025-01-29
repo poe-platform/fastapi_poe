@@ -130,9 +130,8 @@ class PoeBot:
     content from attachments and insert them as messages into the conversation. This is set to
     `True`by default and we recommend leaving on since it allows your bot to comprehend attachments
     uploaded by users by default.
-    - `concat_attachments_to_message` (`bool = False`): Deprecated. This was used to concatenate
-    attachment content to the message body. This is now handled by `insert_attachment_messages`.
-    This will be removed in a future release.
+    - `concat_attachments_to_message` (`bool = False`): **DEPRECATED**: Please set
+    `should_insert_attachment_messages` instead.
 
     """
 
@@ -362,14 +361,14 @@ class PoeBot:
         - `message_id` (`Identifier`): The message id associated with the current QueryRequest
         object. **Important**: This must be the request that is currently being handled by
         get_response. Attempting to attach files to previously handled requests will fail.
-        - `access_key` (`str`): The access_key corresponding to your bot. This is needed to ensure
-        that file upload requests are coming from an authorized source.
         - `download_url` (`Optional[str] = None`): A url to the file to be attached to the message.
         - `download_filename` (`Optional[str] = None`): A filename to be used when storing the
         downloaded attachment. If not set, the filename from the `download_url` is used.
         - `file_data` (`Optional[Union[bytes, BinaryIO]] = None`): The contents of the file to be
         uploaded. This should be a bytes-like or file object.
         - `filename` (`Optional[str] = None`): The name of the file to be attached.
+        - `access_key` (`str`): **DEPRECATED**: Please set the access_key when creating the Bot
+        object instead.
         #### Returns:
         - `AttachmentUploadResponse`
 
@@ -504,6 +503,8 @@ class PoeBot:
         self, query_request: QueryRequest
     ) -> QueryRequest:
         """
+
+        **DEPRECATED**: This method is deprecated. Use `insert_attachment_messages` instead.
 
         Concatenate received attachment file content into the message body. This will be called
         by default if `concat_attachments_to_message` is set to `True` but can also be used
@@ -662,8 +663,10 @@ class PoeBot:
         Visit https://creator.poe.com/docs/creator-monetization for more information.
 
         #### Parameters:
-        - `request` (`QueryRequest`): The currently handlded QueryRequest object.
+        - `request` (`QueryRequest`): The currently handled QueryRequest object.
         - `amounts` (`Union[list[CostItem], CostItem]`): The to be captured amounts.
+
+        #### Returns: `None`
 
         """
 
@@ -696,8 +699,10 @@ class PoeBot:
         Visit https://creator.poe.com/docs/creator-monetization for more information.
 
         #### Parameters:
-        - `request` (`QueryRequest`): The currently handlded QueryRequest object.
+        - `request` (`QueryRequest`): The currently handled QueryRequest object.
         - `amounts` (`Union[list[CostItem], CostItem]`): The to be authorized amounts.
+
+        #### Returns: `None`
 
         """
 
@@ -1037,6 +1042,9 @@ def make_app(
     read the POE_ACCESS_KEY environment variable. If that is not set, the server will
     refuse to start, unless `allow_without_key` is True. If multiple bots are provided,
     the access key must be provided as part of the bot object.
+    - `bot_name` (`str = ""`): The name of the bot as it appears on poe.com.
+    - `api_key` (`str = ""`): **DEPRECATED**: Please set the access_key when creating the Bot
+    object instead.
     - `allow_without_key` (`bool = False`): If True, the server will start even if no access
     key is provided. Requests will not be checked against any key. If an access key is provided, it
     is still checked.
