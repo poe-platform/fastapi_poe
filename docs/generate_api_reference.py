@@ -117,6 +117,7 @@ documented_items = [
     "PartialResponse",
     "ErrorResponse",
     "MetaResponse",
+    "DataResponse",
     "SettingsRequest",
     "SettingsResponse",
     "ReportFeedbackRequest",
