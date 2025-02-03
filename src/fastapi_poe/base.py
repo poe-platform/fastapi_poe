@@ -33,6 +33,7 @@ from fastapi_poe.types import (
     AttachmentUploadResponse,
     ContentType,
     CostItem,
+    DataResponse,
     ErrorResponse,
     Identifier,
     MetaResponse,
@@ -773,6 +774,10 @@ class PoeBot:
         return ServerSentEvent(data=json.dumps({"text": text}), event="text")
 
     @staticmethod
+    def data_event(metadata: str) -> ServerSentEvent:
+        return ServerSentEvent(data=json.dumps({"metadata": metadata}), event="data")
+
+    @staticmethod
     def replace_response_event(text: str) -> ServerSentEvent:
         return ServerSentEvent(
             data=json.dumps({"text": text}), event="replace_response"
@@ -882,6 +887,8 @@ class PoeBot:
                         linkify=event.linkify,
                         suggested_replies=event.suggested_replies,
                     )
+                elif isinstance(event, DataResponse):
+                    yield self.data_event(event.metadata)
                 elif event.is_suggested_reply:
                     yield self.suggested_reply_event(event.text)
                 elif event.is_replace_response:
