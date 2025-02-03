@@ -69,6 +69,7 @@ class ProtocolMessage(BaseModel):
     - `message_id` (`str = ""`)
     - `feedback` (`list[MessageFeedback] = []`)
     - `attachments` (`list[Attachment] = []`)
+    - `metadata` (`Optional[str] = None`)
 
     """
 
