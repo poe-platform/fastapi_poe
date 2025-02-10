@@ -2,7 +2,7 @@ import json
 from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from copy import deepcopy
-from typing import Any, Callable
+from typing import Any, Callable, cast
 from unittest.mock import AsyncMock, Mock, patch
 
 import httpx
@@ -365,7 +365,7 @@ class Test_BotContext:
 
     def create_sse_mock(
         self, events: list[ServerSentEvent]
-    ) -> AbstractAsyncContextManager[AsyncMock]:
+    ) -> Callable[..., AbstractAsyncContextManager[AsyncMock]]:
         async def mock_sse_connection(
             *args: Any, **kwargs: Any  # noqa: ANN401
         ) -> AsyncIterator[AsyncMock]:
@@ -562,8 +562,8 @@ class Test_BotContext:
                     request=mock_request, tools=None, tool_calls=None, tool_results=None
                 ):
                     pass
-                mock_bot_context.on_error.assert_called_once()
-                mock_bot_context.on_error.reset_mock()
+                cast(Mock, mock_bot_context.on_error).assert_called_once()
+                cast(Mock, mock_bot_context.on_error).reset_mock()
             except Exception:
                 pass
 

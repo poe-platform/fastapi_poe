@@ -1,7 +1,7 @@
 import json
 from collections.abc import AsyncIterable, AsyncIterator
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
-from typing import Any
+from typing import Any, Callable, Union
 from unittest.mock import AsyncMock, Mock, patch
 
 import httpx
@@ -32,13 +32,16 @@ from fastapi_poe.types import (
     RequestContext,
 )
 from sse_starlette import ServerSentEvent
+from starlette.routing import Route
 
 
 @pytest.fixture
 def basic_bot() -> PoeBot:
     mock_bot = PoeBot(path="/bot/test_bot", bot_name="test_bot", access_key="123")
 
-    async def get_response(request: QueryRequest) -> AsyncIterable[ProtocolMessage]:
+    async def get_response(
+        request: QueryRequest,
+    ) -> AsyncIterable[Union[PartialResponse, ServerSentEvent, DataResponse]]:
         yield MetaResponse(
             text="",
             suggested_replies=True,
@@ -60,7 +63,9 @@ def basic_bot() -> PoeBot:
 def error_bot() -> PoeBot:
     mock_bot = PoeBot(path="/bot/error_bot", bot_name="error_bot", access_key="123")
 
-    async def get_response(request: QueryRequest) -> AsyncIterable[ProtocolMessage]:
+    async def get_response(
+        request: QueryRequest,
+    ) -> AsyncIterable[Union[PartialResponse, ServerSentEvent, DataResponse]]:
         yield PartialResponse(text="hello")
         yield ErrorResponse(text="sample error", allow_retry=True)
 
@@ -125,9 +130,10 @@ class TestPoeBot:
         index = 0
         async for event in basic_bot.handle_query(mock_request, mock_request_context):
             assert event.event == expected_sse_events_basic[index].event
-            assert json.loads(event.data) == json.loads(
-                expected_sse_events_basic[index].data
-            )
+            expected_data = expected_sse_events_basic[index].data
+            assert expected_data
+            assert event.data
+            assert json.loads(event.data) == json.loads(expected_data)
             index += 1
 
         expected_sse_events_error = [
@@ -141,9 +147,10 @@ class TestPoeBot:
         index = 0
         async for event in error_bot.handle_query(mock_request, mock_request_context):
             assert event.event == expected_sse_events_error[index].event
-            assert json.loads(event.data) == json.loads(
-                expected_sse_events_error[index].data
-            )
+            expected_data = expected_sse_events_error[index].data
+            assert expected_data
+            assert event.data
+            assert json.loads(event.data) == json.loads(expected_data)
             index += 1
 
     def test_insert_attachment_messages(self, basic_bot: PoeBot) -> None:
@@ -357,7 +364,8 @@ class TestPoeBot:
         events: list[ServerSentEvent],
         status_code: int = 200,
         reason_phrase: str = "OK",
-    ) -> AbstractAsyncContextManager[AsyncMock]:
+    ) -> Callable[..., AbstractAsyncContextManager[AsyncMock]]:
+        @asynccontextmanager
         async def mock_sse_connection(
             *args: Any, **kwargs: Any  # noqa: ANN401
         ) -> AsyncIterator[AsyncMock]:
@@ -372,7 +380,7 @@ class TestPoeBot:
             mock_source.aiter_sse = mock_aiter_sse
             yield mock_source
 
-        return asynccontextmanager(mock_sse_connection)
+        return mock_sse_connection
 
     @pytest.mark.asyncio
     async def test_authorize_cost_success(
@@ -477,11 +485,14 @@ def test_make_app(basic_bot: PoeBot, error_bot: PoeBot) -> None:
         {"path": "/bot/test_bot", "name": "poe_post", "methods": {"POST"}},
     ]
 
+    routes = [route for route in app.router.routes if isinstance(route, Route)]
+
     for expected in expected_routes:
         route_exists = any(
             route.path == expected["path"]
             and route.name == expected["name"]
             and route.methods == expected["methods"]
-            for route in app.router.routes
+            for route in routes
         )
+
         assert route_exists, f"Route not found: {expected}"
