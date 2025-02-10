@@ -68,7 +68,7 @@ class InsufficientFundError(Exception):
     pass
 
 
-class LoggingMiddleware(BaseHTTPMiddleware):
+class LoggingMiddleware(BaseHTTPMiddleware):  # pragma: no cover
     async def set_body(self, request: Request) -> None:
         receive_ = await request._receive()
 
@@ -502,7 +502,7 @@ class PoeBot:
     )
     def concat_attachment_content_to_message_body(
         self, query_request: QueryRequest
-    ) -> QueryRequest:
+    ) -> QueryRequest:  # pragma: no cover
         """
 
         **DEPRECATED**: This method is deprecated. Use `insert_attachment_messages` instead.

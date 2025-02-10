@@ -1,14 +1,152 @@
-from fastapi_poe.base import PoeBot
+import json
+from collections.abc import AsyncIterable, AsyncIterator
+from contextlib import AbstractAsyncContextManager, asynccontextmanager
+from typing import Any
+from unittest.mock import AsyncMock, Mock, patch
+
+import httpx
+import pytest
+from fastapi import Request
+from fastapi_poe.base import (
+    AttachmentUploadError,
+    CostRequestError,
+    InsufficientFundError,
+    InvalidParameterError,
+    PoeBot,
+    make_app,
+)
 from fastapi_poe.templates import (
     IMAGE_VISION_ATTACHMENT_TEMPLATE,
     TEXT_ATTACHMENT_TEMPLATE,
     URL_ATTACHMENT_TEMPLATE,
 )
-from fastapi_poe.types import Attachment, ProtocolMessage, QueryRequest
+from fastapi_poe.types import (
+    Attachment,
+    CostItem,
+    DataResponse,
+    ErrorResponse,
+    MetaResponse,
+    PartialResponse,
+    ProtocolMessage,
+    QueryRequest,
+    RequestContext,
+)
+from sse_starlette import ServerSentEvent
+
+
+@pytest.fixture
+def basic_bot() -> PoeBot:
+    mock_bot = PoeBot(path="/bot/test_bot", bot_name="test_bot", access_key="123")
+
+    async def get_response(request: QueryRequest) -> AsyncIterable[ProtocolMessage]:
+        yield MetaResponse(
+            text="",
+            suggested_replies=True,
+            content_type="text/markdown",
+            refetch_settings=False,
+        )
+        yield PartialResponse(text="hello")
+        yield PartialResponse(text="this is a suggested reply", is_suggested_reply=True)
+        yield PartialResponse(
+            text="this is a replace response", is_replace_response=True
+        )
+        yield DataResponse(metadata='{"foo": "bar"}')
+
+    mock_bot.get_response = get_response
+    return mock_bot
+
+
+@pytest.fixture
+def error_bot() -> PoeBot:
+    mock_bot = PoeBot(path="/bot/error_bot", bot_name="error_bot", access_key="123")
+
+    async def get_response(request: QueryRequest) -> AsyncIterable[ProtocolMessage]:
+        yield PartialResponse(text="hello")
+        yield ErrorResponse(text="sample error", allow_retry=True)
+
+    mock_bot.get_response = get_response
+    return mock_bot
+
+
+@pytest.fixture
+def mock_request() -> QueryRequest:
+    return QueryRequest(
+        version="1.0",
+        type="query",
+        query=[ProtocolMessage(role="user", content="Hello, world!")],
+        user_id="123",
+        conversation_id="123",
+        message_id="456",
+        bot_query_id="123",
+    )
+
+
+@pytest.fixture
+def mock_request_context() -> RequestContext:
+    return RequestContext(http_request=Mock(spec=Request))
 
 
 class TestPoeBot:
-    def test_insert_attachment_messages(self) -> None:
+
+    @pytest.mark.asyncio
+    async def test_handle_query(
+        self,
+        basic_bot: PoeBot,
+        error_bot: PoeBot,
+        mock_request: QueryRequest,
+        mock_request_context: RequestContext,
+    ) -> None:
+        expected_sse_events_basic = [
+            ServerSentEvent(
+                event="meta",
+                data=json.dumps(
+                    {
+                        "suggested_replies": True,
+                        "content_type": "text/markdown",
+                        "refetch_settings": False,
+                        "linkify": True,
+                    }
+                ),
+            ),
+            ServerSentEvent(event="text", data=json.dumps({"text": "hello"})),
+            ServerSentEvent(
+                event="suggested_reply",
+                data=json.dumps({"text": "this is a suggested reply"}),
+            ),
+            ServerSentEvent(
+                event="replace_response",
+                data=json.dumps({"text": "this is a replace response"}),
+            ),
+            ServerSentEvent(
+                event="data", data=json.dumps({"metadata": '{"foo": "bar"}'})
+            ),
+            ServerSentEvent(event="done", data="{}"),
+        ]
+        index = 0
+        async for event in basic_bot.handle_query(mock_request, mock_request_context):
+            assert event.event == expected_sse_events_basic[index].event
+            assert json.loads(event.data) == json.loads(
+                expected_sse_events_basic[index].data
+            )
+            index += 1
+
+        expected_sse_events_error = [
+            ServerSentEvent(event="text", data=json.dumps({"text": "hello"})),
+            ServerSentEvent(
+                event="error",
+                data=json.dumps({"text": "sample error", "allow_retry": True}),
+            ),
+            ServerSentEvent(event="done", data="{}"),
+        ]
+        index = 0
+        async for event in error_bot.handle_query(mock_request, mock_request_context):
+            assert event.event == expected_sse_events_error[index].event
+            assert json.loads(event.data) == json.loads(
+                expected_sse_events_error[index].data
+            )
+            index += 1
+
+    def test_insert_attachment_messages(self, basic_bot: PoeBot) -> None:
         # Create mock attachments
         mock_text_attachment = Attachment(
             url="https://pfst.cf2.poecdn.net/base/text/test.txt",
@@ -118,8 +256,232 @@ class TestPoeBot:
         ]
 
         # Test the insert_attachment_messages method
-        bot = PoeBot(bot_name="test_bot")
-        modified_query_request = bot.insert_attachment_messages(mock_query_request)
+        modified_query_request = basic_bot.insert_attachment_messages(
+            mock_query_request
+        )
         protocol_messages = modified_query_request.query
 
         assert protocol_messages == expected_protocol_messages
+
+    def test_make_prompt_author_role_alternated(self, basic_bot: PoeBot) -> None:
+        mock_protocol_messages = [
+            ProtocolMessage(
+                role="user",
+                content="Hello, world!",
+                attachments=[
+                    Attachment(
+                        url="https://pfst.cf2.poecdn.net/base/text/test.txt",
+                        name="test.txt",
+                        content_type="text/plain",
+                        parsed_content="Hello, world!",
+                    )
+                ],
+            ),
+            ProtocolMessage(
+                role="user",
+                content="Hello, world!",
+                attachments=[
+                    Attachment(
+                        url="https://pfst.cf2.poecdn.net/base/text/test2.txt",
+                        name="test2.txt",
+                        content_type="text/plain",
+                        parsed_content="Bye!",
+                    )
+                ],
+            ),
+            ProtocolMessage(role="bot", content="Hello, world!"),
+        ]
+        expected_protocol_messages = [
+            ProtocolMessage(
+                role="user",
+                content="Hello, world!\n\nHello, world!",
+                attachments=[
+                    Attachment(
+                        url="https://pfst.cf2.poecdn.net/base/text/test2.txt",
+                        name="test2.txt",
+                        content_type="text/plain",
+                        parsed_content="Bye!",
+                    ),
+                    Attachment(
+                        url="https://pfst.cf2.poecdn.net/base/text/test.txt",
+                        name="test.txt",
+                        content_type="text/plain",
+                        parsed_content="Hello, world!",
+                    ),
+                ],
+            ),
+            ProtocolMessage(role="bot", content="Hello, world!"),
+        ]
+        assert (
+            basic_bot.make_prompt_author_role_alternated(mock_protocol_messages)
+            == expected_protocol_messages
+        )
+
+    @pytest.mark.asyncio
+    @patch("httpx.AsyncClient.send")
+    async def test_post_message_attachment(
+        self, mock_send: Mock, basic_bot: PoeBot
+    ) -> None:
+        mock_send.return_value = httpx.Response(
+            200,
+            json={
+                "inline_ref": "123",
+                "attachment_url": "https://pfst.cf2.poecdn.net/base/text/test.txt",
+            },
+        )
+        await basic_bot.post_message_attachment(
+            message_id="123",
+            download_url="https://pfst.cf2.poecdn.net/base/text/test.txt",
+            download_filename="test.txt",
+        )
+
+        mock_send.return_value = httpx.Response(400, json={"error": "test"})
+        with pytest.raises(AttachmentUploadError):
+            await basic_bot.post_message_attachment(
+                message_id="123",
+                download_url="https://pfst.cf2.poecdn.net/base/text/test.txt",
+                download_filename="test.txt",
+            )
+
+        with pytest.raises(InvalidParameterError):
+            await basic_bot.post_message_attachment(
+                message_id="123",
+                download_url="https://pfst.cf2.poecdn.net/base/text/test.txt",
+                download_filename="test.txt",
+                file_data=b"test",
+                filename="test.txt",
+            )
+
+    def create_sse_mock(
+        self,
+        events: list[ServerSentEvent],
+        status_code: int = 200,
+        reason_phrase: str = "OK",
+    ) -> AbstractAsyncContextManager[AsyncMock]:
+        async def mock_sse_connection(
+            *args: Any, **kwargs: Any  # noqa: ANN401
+        ) -> AsyncIterator[AsyncMock]:
+            mock_source = AsyncMock()
+            mock_source.response.status_code = status_code
+            mock_source.response.reason_phrase = reason_phrase
+
+            async def mock_aiter_sse() -> AsyncIterator[ServerSentEvent]:
+                for event in events:
+                    yield event
+
+            mock_source.aiter_sse = mock_aiter_sse
+            yield mock_source
+
+        return asynccontextmanager(mock_sse_connection)
+
+    @pytest.mark.asyncio
+    async def test_authorize_cost_success(
+        self, basic_bot: PoeBot, mock_request: QueryRequest
+    ) -> None:
+        cost_item = CostItem(amount_usd_milli_cents=1000)
+        url = "https://example.com"
+
+        events = [ServerSentEvent(event="result", data='{"status": "success"}')]
+
+        with patch("httpx_sse.aconnect_sse") as mock_connect_sse:
+            mock_connect_sse.side_effect = self.create_sse_mock(
+                events, status_code=200, reason_phrase="OK"
+            )
+            await basic_bot.authorize_cost(
+                request=mock_request, amounts=cost_item, base_url=url
+            )
+
+    @pytest.mark.asyncio
+    async def test_authorize_cost_failure(
+        self, basic_bot: PoeBot, mock_request: QueryRequest
+    ) -> None:
+        cost_item = CostItem(amount_usd_milli_cents=1000)
+        url = "https://example.com"
+
+        events = [
+            ServerSentEvent(event="result", data='{"status": "insufficient funds"}')
+        ]
+
+        with patch("httpx_sse.aconnect_sse") as mock_connect_sse:
+            mock_connect_sse.side_effect = self.create_sse_mock(
+                events, status_code=400, reason_phrase="Bad Request"
+            )
+            with pytest.raises(CostRequestError):
+                await basic_bot.authorize_cost(
+                    request=mock_request, amounts=cost_item, base_url=url
+                )
+
+        with patch("httpx_sse.aconnect_sse") as mock_connect_sse:
+            mock_connect_sse.side_effect = self.create_sse_mock(
+                events, status_code=200, reason_phrase="OK"
+            )
+            with pytest.raises(InsufficientFundError):
+                await basic_bot.authorize_cost(
+                    request=mock_request, amounts=cost_item, base_url=url
+                )
+
+    @pytest.mark.asyncio
+    async def test_capture_cost_success(
+        self, basic_bot: PoeBot, mock_request: QueryRequest
+    ) -> None:
+        cost_item = CostItem(amount_usd_milli_cents=1000)
+        url = "https://example.com"
+
+        events = [ServerSentEvent(event="result", data='{"status": "success"}')]
+
+        with patch("httpx_sse.aconnect_sse") as mock_connect_sse:
+            mock_connect_sse.side_effect = self.create_sse_mock(
+                events, status_code=200, reason_phrase="OK"
+            )
+            await basic_bot.capture_cost(
+                request=mock_request, amounts=cost_item, base_url=url
+            )
+
+    @pytest.mark.asyncio
+    async def test_capture_cost_failure(
+        self, basic_bot: PoeBot, mock_request: QueryRequest
+    ) -> None:
+        cost_item = CostItem(amount_usd_milli_cents=1000)
+        url = "https://example.com"
+
+        events = [
+            ServerSentEvent(event="result", data='{"status": "insufficient funds"}')
+        ]
+
+        with patch("httpx_sse.aconnect_sse") as mock_connect_sse:
+            mock_connect_sse.side_effect = self.create_sse_mock(
+                events, status_code=400, reason_phrase="Bad Request"
+            )
+            with pytest.raises(CostRequestError):
+                await basic_bot.capture_cost(
+                    request=mock_request, amounts=cost_item, base_url=url
+                )
+
+        with patch("httpx_sse.aconnect_sse") as mock_connect_sse:
+            mock_connect_sse.side_effect = self.create_sse_mock(
+                events, status_code=200, reason_phrase="OK"
+            )
+            with pytest.raises(InsufficientFundError):
+                await basic_bot.capture_cost(
+                    request=mock_request, amounts=cost_item, base_url=url
+                )
+
+
+def test_make_app(basic_bot: PoeBot, error_bot: PoeBot) -> None:
+    app = make_app([basic_bot, error_bot])
+    assert app is not None
+    assert app.router is not None
+
+    expected_routes = [
+        {"path": "/bot/error_bot", "name": "poe_post", "methods": {"POST"}},
+        {"path": "/bot/test_bot", "name": "poe_post", "methods": {"POST"}},
+    ]
+
+    for expected in expected_routes:
+        route_exists = any(
+            route.path == expected["path"]
+            and route.name == expected["name"]
+            and route.methods == expected["methods"]
+            for route in app.router.routes
+        )
+        assert route_exists, f"Route not found: {expected}"

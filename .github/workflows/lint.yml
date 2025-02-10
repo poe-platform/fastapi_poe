@@ -52,5 +52,5 @@ jobs:
           allow-prereleases: true
           cache: pip
           cache-dependency-path: pyproject.toml
-      - run: pip install -e .[dev] pytest
+      - run: pip install -e ".[dev]"
       - run: pytest tests/
