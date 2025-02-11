@@ -68,7 +68,7 @@ class InsufficientFundError(Exception):
     pass
 
 
-class LoggingMiddleware(BaseHTTPMiddleware):
+class LoggingMiddleware(BaseHTTPMiddleware):  # pragma: no cover
     async def set_body(self, request: Request) -> None:
         receive_ = await request._receive()
 
@@ -147,7 +147,7 @@ class PoeBot:
     # Override these for your bot
     async def get_response(
         self, request: QueryRequest
-    ) -> AsyncIterable[Union[PartialResponse, ServerSentEvent]]:
+    ) -> AsyncIterable[Union[PartialResponse, ServerSentEvent, DataResponse]]:
         """
 
         Override this to define your bot's response given a user query.
@@ -171,7 +171,7 @@ class PoeBot:
 
     async def get_response_with_context(
         self, request: QueryRequest, context: RequestContext
-    ) -> AsyncIterable[Union[PartialResponse, ServerSentEvent]]:
+    ) -> AsyncIterable[Union[PartialResponse, ServerSentEvent, DataResponse]]:
         """
 
         A version of `get_response` that also includes the request context information. By
@@ -502,7 +502,7 @@ class PoeBot:
     )
     def concat_attachment_content_to_message_body(
         self, query_request: QueryRequest
-    ) -> QueryRequest:
+    ) -> QueryRequest:  # pragma: no cover
         """
 
         **DEPRECATED**: This method is deprecated. Use `insert_attachment_messages` instead.

@@ -29,12 +29,22 @@ dependencies = [
     "httpx-sse",
     "pydantic>2",
 ]
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "pytest-asyncio",
+]
 
 [project.urls]
 "Homepage" = "https://creator.poe.com/"
 
 [tool.pyright]
 pythonVersion = "3.9"
+
+[tool.pytest.ini_options]
+addopts = "--cov=src/fastapi_poe --cov-fail-under=80"
+required_plugins = ["pytest-cov"]
 
 [tool.black]
 target-version = ['py39']
