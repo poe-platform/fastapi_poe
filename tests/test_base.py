@@ -22,6 +22,7 @@ from fastapi_poe.templates import (
 )
 from fastapi_poe.types import (
     Attachment,
+    AttachmentUploadResponse,
     CostItem,
     DataResponse,
     ErrorResponse,
@@ -94,14 +95,13 @@ def mock_request_context() -> RequestContext:
 class TestPoeBot:
 
     @pytest.mark.asyncio
-    async def test_handle_query(
+    async def test_handle_query_basic_bot(
         self,
         basic_bot: PoeBot,
-        error_bot: PoeBot,
         mock_request: QueryRequest,
         mock_request_context: RequestContext,
     ) -> None:
-        expected_sse_events_basic = [
+        expected_sse_events = [
             ServerSentEvent(
                 event="meta",
                 data=json.dumps(
@@ -127,15 +127,26 @@ class TestPoeBot:
             ),
             ServerSentEvent(event="done", data="{}"),
         ]
-        index = 0
-        async for event in basic_bot.handle_query(mock_request, mock_request_context):
-            assert event.event == expected_sse_events_basic[index].event
-            expected_data = expected_sse_events_basic[index].data
-            assert expected_data
-            assert event.data
-            assert json.loads(event.data) == json.loads(expected_data)
-            index += 1
+        actual_sse_events = [
+            event
+            async for event in basic_bot.handle_query(
+                mock_request, mock_request_context
+            )
+        ]
+        assert len(actual_sse_events) == len(expected_sse_events)
 
+        for actual_event, expected_event in zip(actual_sse_events, expected_sse_events):
+            assert actual_event.event == expected_event.event
+            assert expected_event.data and actual_event.data
+            assert json.loads(actual_event.data) == json.loads(expected_event.data)
+
+    @pytest.mark.asyncio
+    async def test_handle_query_error_bot(
+        self,
+        error_bot: PoeBot,
+        mock_request: QueryRequest,
+        mock_request_context: RequestContext,
+    ) -> None:
         expected_sse_events_error = [
             ServerSentEvent(event="text", data=json.dumps({"text": "hello"})),
             ServerSentEvent(
@@ -144,14 +155,20 @@ class TestPoeBot:
             ),
             ServerSentEvent(event="done", data="{}"),
         ]
-        index = 0
-        async for event in error_bot.handle_query(mock_request, mock_request_context):
-            assert event.event == expected_sse_events_error[index].event
-            expected_data = expected_sse_events_error[index].data
-            assert expected_data
-            assert event.data
-            assert json.loads(event.data) == json.loads(expected_data)
-            index += 1
+        actual_sse_events = [
+            event
+            async for event in error_bot.handle_query(
+                mock_request, mock_request_context
+            )
+        ]
+        assert len(actual_sse_events) == len(expected_sse_events_error)
+
+        for actual_event, expected_event in zip(
+            actual_sse_events, expected_sse_events_error
+        ):
+            assert actual_event.event == expected_event.event
+            assert expected_event.data and actual_event.data
+            assert json.loads(actual_event.data) == json.loads(expected_event.data)
 
     def test_insert_attachment_messages(self, basic_bot: PoeBot) -> None:
         # Create mock attachments
@@ -262,7 +279,6 @@ class TestPoeBot:
             message_with_attachments,
         ]
 
-        # Test the insert_attachment_messages method
         modified_query_request = basic_bot.insert_attachment_messages(
             mock_query_request
         )
@@ -326,7 +342,7 @@ class TestPoeBot:
 
     @pytest.mark.asyncio
     @patch("httpx.AsyncClient.send")
-    async def test_post_message_attachment(
+    async def test_post_message_attachment_basic(
         self, mock_send: Mock, basic_bot: PoeBot
     ) -> None:
         mock_send.return_value = httpx.Response(
@@ -336,12 +352,21 @@ class TestPoeBot:
                 "attachment_url": "https://pfst.cf2.poecdn.net/base/text/test.txt",
             },
         )
-        await basic_bot.post_message_attachment(
+        result = await basic_bot.post_message_attachment(
             message_id="123",
             download_url="https://pfst.cf2.poecdn.net/base/text/test.txt",
             download_filename="test.txt",
         )
+        assert result == AttachmentUploadResponse(
+            inline_ref="123",
+            attachment_url="https://pfst.cf2.poecdn.net/base/text/test.txt",
+        )
 
+    @pytest.mark.asyncio
+    @patch("httpx.AsyncClient.send")
+    async def test_post_message_attachment_error(
+        self, mock_send: Mock, basic_bot: PoeBot
+    ) -> None:
         mock_send.return_value = httpx.Response(400, json={"error": "test"})
         with pytest.raises(AttachmentUploadError):
             await basic_bot.post_message_attachment(
@@ -399,6 +424,15 @@ class TestPoeBot:
                 request=mock_request, amounts=cost_item, base_url=url
             )
 
+            mock_connect_sse.assert_called_once()
+            call_args = mock_connect_sse.call_args
+            assert (
+                call_args.kwargs["url"]
+                == f"{url}bot/cost/{mock_request.bot_query_id}/authorize"
+            )
+            assert call_args.kwargs["json"]["amounts"] == [cost_item.model_dump()]
+            assert call_args.kwargs["json"]["access_key"] == basic_bot.access_key
+
     @pytest.mark.asyncio
     async def test_authorize_cost_failure(
         self, basic_bot: PoeBot, mock_request: QueryRequest
@@ -444,6 +478,15 @@ class TestPoeBot:
             await basic_bot.capture_cost(
                 request=mock_request, amounts=cost_item, base_url=url
             )
+
+            mock_connect_sse.assert_called_once()
+            call_args = mock_connect_sse.call_args
+            assert (
+                call_args.kwargs["url"]
+                == f"{url}bot/cost/{mock_request.bot_query_id}/capture"
+            )
+            assert call_args.kwargs["json"]["amounts"] == [cost_item.model_dump()]
+            assert call_args.kwargs["json"]["access_key"] == basic_bot.access_key
 
     @pytest.mark.asyncio
     async def test_capture_cost_failure(

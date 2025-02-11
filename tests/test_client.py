@@ -43,13 +43,9 @@ def mock_request() -> QueryRequest:
 
 
 async def message_generator() -> AsyncGenerator[BotMessage, None]:
-    return_values = [
-        BotMessage(text="Hello,"),
-        BotMessage(text=" world"),
-        BotMessage(text="!"),
-    ]
-    for message in return_values:
-        yield message
+    return_messages = ["Hello,", " world", "!"]
+    for message in return_messages:
+        yield BotMessage(text=message)
 
 
 @pytest_asyncio.fixture
@@ -143,6 +139,8 @@ class TestStreamRequest:
     async def mock_perform_query_request_for_tools(
         self,
     ) -> AsyncGenerator[BotMessage, None]:
+        """Mock the OpenAI API response for tool calls."""
+
         mock_tool_response_template = {
             "id": "chatcmpl-abcde",
             "object": "chat.completion.chunk",
@@ -209,6 +207,8 @@ class TestStreamRequest:
     async def mock_perform_query_request_with_no_tools_selected(
         self,
     ) -> AsyncGenerator[BotMessage, None]:
+        """Mock the OpenAI API response for tool calls when no tools are selected."""
+
         mock_tool_response_template = {
             "id": "chatcmpl-abcde",
             "object": "chat.completion.chunk",
@@ -313,7 +313,7 @@ class TestStreamRequest:
                 content=json.dumps(tool_executables[1]('{"location":"Tokyo, JP"}')),
             ),
         ]
-        # check that the tools were called
+        # check that the tool calls and results are passed to the second perform_query_request
         assert {
             "tool_calls": expected_tool_calls,
             "tool_results": expected_tool_results,
@@ -563,7 +563,6 @@ class Test_BotContext:
                 ):
                     pass
                 cast(Mock, mock_bot_context.on_error).assert_called_once()
-                cast(Mock, mock_bot_context.on_error).reset_mock()
             except Exception:
                 pass
 
