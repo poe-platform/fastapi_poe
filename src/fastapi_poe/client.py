@@ -12,7 +12,7 @@ import json
 import warnings
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional, cast
+from typing import Any, Callable, Optional, Union, cast
 
 import httpx
 import httpx_sse
@@ -353,7 +353,8 @@ async def stream_request(
     tool_results = None
     if tools is not None:
         assert tool_executables is not None
-        tool_calls = await _get_tool_calls(
+        tool_calls = []
+        async for message in _stream_request_with_tools(
             request=request,
             bot_name=bot_name,
             api_key=api_key,
@@ -365,26 +366,29 @@ async def stream_request(
             num_tries=num_tries,
             retry_sleep_time=retry_sleep_time,
             base_url=base_url,
-        )
-        tool_results = await _get_tool_results(
-            tool_executables=tool_executables, tool_calls=tool_calls
-        )
-    async for message in stream_request_base(
-        request=request,
-        bot_name=bot_name,
-        api_key=api_key,
-        tools=tools,
-        tool_calls=tool_calls,
-        tool_results=tool_results,
-        access_key=access_key,
-        access_key_deprecation_warning_stacklevel=access_key_deprecation_warning_stacklevel,
-        session=session,
-        on_error=on_error,
-        num_tries=num_tries,
-        retry_sleep_time=retry_sleep_time,
-        base_url=base_url,
-    ):
-        yield message
+        ):
+            if isinstance(message, ToolCallDefinition):
+                tool_calls.append(message)
+            else:
+                yield message
+        tool_results = await _get_tool_results(tool_executables, tool_calls)
+    if tools is None or (tool_calls and tool_results):
+        async for message in stream_request_base(
+            request=request,
+            bot_name=bot_name,
+            api_key=api_key,
+            tools=tools,
+            tool_calls=tool_calls,
+            tool_results=tool_results,
+            access_key=access_key,
+            access_key_deprecation_warning_stacklevel=access_key_deprecation_warning_stacklevel,
+            session=session,
+            on_error=on_error,
+            num_tries=num_tries,
+            retry_sleep_time=retry_sleep_time,
+            base_url=base_url,
+        ):
+            yield message
 
 
 async def _get_tool_results(
@@ -414,7 +418,7 @@ async def _get_tool_results(
     return tool_results
 
 
-async def _get_tool_calls(
+async def _stream_request_with_tools(
     request: QueryRequest,
     bot_name: str,
     api_key: str = "",
@@ -427,7 +431,7 @@ async def _get_tool_calls(
     num_tries: int = 2,
     retry_sleep_time: float = 0.5,
     base_url: str = "https://api.poe.com/bot/",
-) -> list[ToolCallDefinition]:
+) -> AsyncGenerator[Union[BotMessage, ToolCallDefinition], None]:
     tool_call_object_dict: dict[int, dict[str, Any]] = {}
     async for message in stream_request_base(
         request=request,
@@ -442,6 +446,7 @@ async def _get_tool_calls(
         retry_sleep_time=retry_sleep_time,
         base_url=base_url,
     ):
+        # OpenAI might return empty choices when its sending the final usage chunk
         if (
             message.data is not None
             and "choices" in message.data
@@ -449,7 +454,7 @@ async def _get_tool_calls(
         ):
             finish_reason = message.data["choices"][0]["finish_reason"]
             if finish_reason is None:
-                try:
+                if "tool_calls" in message.data["choices"][0]["delta"]:
                     tool_call_object = message.data["choices"][0]["delta"][
                         "tool_calls"
                     ][0]
@@ -461,16 +466,18 @@ async def _get_tool_calls(
                         tool_call_object_dict[index]["function"][
                             "arguments"
                         ] += function_info["arguments"]
-                except KeyError:
-                    continue
+                # if no tool calls are selected, the deltas contain content instead of tool_calls
+                elif "content" in message.data["choices"][0]["delta"]:
+                    yield BotMessage(
+                        text=message.data["choices"][0]["delta"]["content"]
+                    )
+
     tool_call_object_list = [
         tool_call_object
-        for index, tool_call_object in sorted(tool_call_object_dict.items())
+        for _, tool_call_object in sorted(tool_call_object_dict.items())
     ]
-    return [
-        ToolCallDefinition(**tool_call_object)
-        for tool_call_object in tool_call_object_list
-    ]
+    for tool_call_object in tool_call_object_list:
+        yield ToolCallDefinition(**tool_call_object)
 
 
 async def stream_request_base(
