@@ -231,12 +231,20 @@ class TestStreamRequest:
             ],
             "usage": None,
         }
-        mock_responses = [deepcopy(mock_tool_response_template) for _ in range(2)]
-        # if no tools are selected, the first chunk has a delta with content
-        mock_responses[0]["choices"][0]["delta"] = {
-            "role": "assistant",
-            "content": "Hello, world!",
-        }
+        # if no tools are selected, the deltas contain content instead of tool_calls
+        mock_deltas = [
+            {"content": "there were"},
+            {"content": " no tool calls"},
+            {"content": "!"},
+        ]
+        mock_responses = [
+            deepcopy(mock_tool_response_template) for _ in range(len(mock_deltas))
+        ]
+        for i, delta in enumerate(mock_deltas):
+            mock_responses[i]["choices"][0]["delta"] = delta
+
+        # add final chunk
+        mock_responses.append(deepcopy(mock_tool_response_template))
         mock_responses[-1][
             "choices"
         ] = []  # last chunk has no choices array because it sends usage
@@ -327,12 +335,10 @@ class TestStreamRequest:
         mock_perform_query_request_with_tools: Mock,
         mock_request: QueryRequest,
         tool_definitions_and_executables: tuple[list[ToolDefinition], list[Callable]],
-        mock_text_only_query_response: AsyncGenerator[BotMessage, None],
     ) -> None:
         """Test case where the model does not select any tools to call."""
         mock_perform_query_request_with_tools.side_effect = [
-            self.mock_perform_query_request_with_no_tools_selected(),
-            mock_text_only_query_response,
+            self.mock_perform_query_request_with_no_tools_selected()
         ]
         concatenated_text = ""
         tools, tool_executables = tool_definitions_and_executables
@@ -340,15 +346,9 @@ class TestStreamRequest:
             mock_request, "test_bot", tools=tools, tool_executables=tool_executables
         ):
             concatenated_text += message.text
-        assert concatenated_text == "Hello, world!"
-
-        # check no tools were called
-        assert {
-            "tool_calls": [],
-            "tool_results": [],
-        }.items() <= mock_perform_query_request_with_tools.call_args_list[
-            1
-        ].kwargs.items()
+        assert concatenated_text == "there were no tool calls!"
+        # we should not make a second request if no tools are selected
+        assert mock_perform_query_request_with_tools.call_count == 1
 
 
 @pytest.mark.asyncio
