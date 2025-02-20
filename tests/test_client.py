@@ -1,7 +1,6 @@
 import json
 from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
-from copy import deepcopy
 from typing import Any, Callable, cast
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -136,11 +135,7 @@ class TestStreamRequest:
 
         return tools, tool_executables
 
-    async def mock_perform_query_request_for_tools(
-        self,
-    ) -> AsyncGenerator[BotMessage, None]:
-        """Mock the OpenAI API response for tool calls."""
-
+    def _create_mock_openai_response(self, delta: dict[str, Any]) -> dict[str, Any]:
         mock_tool_response_template = {
             "id": "chatcmpl-abcde",
             "object": "chat.completion.chunk",
@@ -163,38 +158,59 @@ class TestStreamRequest:
             ],
             "usage": None,
         }
-        mock_delta_tool_calls = [
-            [
-                {
-                    "index": 0,
-                    "id": "call_123",
-                    "type": "function",
-                    "function": {"name": "get_current_weather", "arguments": ""},
-                }
-            ],
-            [{"index": 0, "function": {"arguments": '{"'}}],
-            [{"index": 0, "function": {"arguments": 'location":"San Francisco, CA'}}],
-            [{"index": 0, "function": {"arguments": '"}'}}],
-            [
-                {
-                    "index": 1,
-                    "id": "call_456",
-                    "type": "function",
-                    "function": {"name": "get_current_mayor", "arguments": ""},
-                }
-            ],
-            [{"index": 1, "function": {"arguments": '{"'}}],
-            [{"index": 1, "function": {"arguments": 'location":"Tokyo, JP'}}],
-            [{"index": 1, "function": {"arguments": '"}'}}],
-            [{}],  # last chunk has no delta
+
+        mock_tool_response_template["choices"][0]["delta"] = delta
+        return mock_tool_response_template
+
+    async def mock_perform_query_request_for_tools(
+        self,
+    ) -> AsyncGenerator[BotMessage, None]:
+        """Mock the OpenAI API response for tool calls."""
+
+        mock_delta = [
+            {
+                "tool_calls": [
+                    {
+                        "index": 0,
+                        "id": "call_123",
+                        "type": "function",
+                        "function": {"name": "get_current_weather", "arguments": ""},
+                    }
+                ]
+            },
+            {"tool_calls": [{"index": 0, "function": {"arguments": '{"'}}]},
+            {
+                "tool_calls": [
+                    {
+                        "index": 0,
+                        "function": {"arguments": 'location":"San Francisco, CA'},
+                    }
+                ]
+            },
+            {"tool_calls": [{"index": 0, "function": {"arguments": '"}'}}]},
+            {
+                "tool_calls": [
+                    {
+                        "index": 1,
+                        "id": "call_456",
+                        "type": "function",
+                        "function": {"name": "get_current_mayor", "arguments": ""},
+                    }
+                ]
+            },
+            {"tool_calls": [{"index": 1, "function": {"arguments": '{"'}}]},
+            {
+                "tool_calls": [
+                    {"index": 1, "function": {"arguments": 'location":"Tokyo, JP'}}
+                ]
+            },
+            {"tool_calls": [{"index": 1, "function": {"arguments": '"}'}}]},
+            {},
         ]
         mock_responses = [
-            deepcopy(mock_tool_response_template)
-            for _ in range(len(mock_delta_tool_calls))
+            self._create_mock_openai_response(delta) for delta in mock_delta
         ]
-        for i, delta_tool_call in enumerate(mock_delta_tool_calls):
-            mock_responses[i]["choices"][0]["delta"]["tool_calls"] = delta_tool_call
-        mock_responses[-1]["choices"][0]["delta"] = None
+        # last chunk has finish reason "tool_calls"
         mock_responses[-1]["choices"][0]["finish_reason"] = "tool_calls"
 
         return_values = [
@@ -209,45 +225,17 @@ class TestStreamRequest:
     ) -> AsyncGenerator[BotMessage, None]:
         """Mock the OpenAI API response for tool calls when no tools are selected."""
 
-        mock_tool_response_template = {
-            "id": "chatcmpl-abcde",
-            "object": "chat.completion.chunk",
-            "created": 1738799163,
-            "model": "gpt-3.5-turbo-0125",
-            "service_tier": "default",
-            "system_fingerprint": None,
-            "choices": [
-                {
-                    "index": 0,
-                    "delta": {
-                        "role": "assistant",
-                        "content": None,
-                        "tool_calls": None,
-                        "refusal": None,
-                    },
-                    "logprobs": None,
-                    "finish_reason": None,
-                }
-            ],
-            "usage": None,
-        }
-        # if no tools are selected, the deltas contain content instead of tool_calls
         mock_deltas = [
             {"content": "there were"},
             {"content": " no tool calls"},
             {"content": "!"},
+            {},
         ]
         mock_responses = [
-            deepcopy(mock_tool_response_template) for _ in range(len(mock_deltas))
+            self._create_mock_openai_response(delta) for delta in mock_deltas
         ]
-        for i, delta in enumerate(mock_deltas):
-            mock_responses[i]["choices"][0]["delta"] = delta
-
-        # add final chunk
-        mock_responses.append(deepcopy(mock_tool_response_template))
-        mock_responses[-1][
-            "choices"
-        ] = []  # last chunk has no choices array because it sends usage
+        # last chunk has no choices array because it sends usage
+        mock_responses[-1]["choices"] = []
         mock_responses[-1]["usage"] = {"completion_tokens": 1, "prompt_tokens": 1}
         return_values = [
             BotMessage(text="", data=response) for response in mock_responses
