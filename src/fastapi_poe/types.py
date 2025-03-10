@@ -235,8 +235,14 @@ class SettingsResponse(BaseModel):
 
 
 class AttachmentUploadResponse(BaseModel):
-    inline_ref: Optional[str]
     attachment_url: Optional[str]
+    mime_type: Optional[str]
+    inline_ref: Optional[str]
+
+
+class AttachmentHttpResponse(BaseModel):
+    attachment_url: Optional[str]
+    mime_type: Optional[str]
 
 
 class DataResponse(BaseModel):
@@ -305,6 +311,9 @@ class PartialResponse(BaseModel):
 
     is_replace_response: bool = False
     """If true, this text should completely replace the previous bot text."""
+
+    attachment: Optional[Attachment] = None
+    """If the bot returns an attachment, it will be contained here."""
 
 
 class ErrorResponse(PartialResponse):

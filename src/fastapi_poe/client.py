@@ -18,6 +18,7 @@ import httpx
 import httpx_sse
 
 from .types import (
+    Attachment,
     ContentType,
     Identifier,
     ProtocolMessage,
@@ -188,6 +189,22 @@ class _BotContext:
                         event.data, "replace_response", message_id
                     )
                     chunks.clear()
+                elif event.event == "file":
+                    yield BotMessage(
+                        text="",
+                        attachment=Attachment(
+                            url=await self._get_single_json_field(
+                                event.data, "file", message_id, "url"
+                            ),
+                            content_type=await self._get_single_json_field(
+                                event.data, "file", message_id, "content_type"
+                            ),
+                            name=await self._get_single_json_field(
+                                event.data, "file", message_id, "name"
+                            ),
+                        ),
+                    )
+                    continue
                 elif event.event == "suggested_reply":
                     text = await self._get_single_json_field(
                         event.data, "suggested_reply", message_id

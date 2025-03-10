@@ -4,12 +4,15 @@ import copy
 import json
 import logging
 import os
+import random
+import string
 import sys
 import warnings
 from collections import defaultdict
 from collections.abc import AsyncIterable, Awaitable, Sequence
 from dataclasses import dataclass
 from typing import BinaryIO, Callable, Optional, Union
+from urllib.parse import unquote, urlparse
 
 import httpx
 import httpx_sse
@@ -30,6 +33,7 @@ from fastapi_poe.templates import (
     URL_ATTACHMENT_TEMPLATE,
 )
 from fastapi_poe.types import (
+    AttachmentHttpResponse,
     AttachmentUploadResponse,
     ContentType,
     CostItem,
@@ -109,6 +113,17 @@ async def http_exception_handler(request: Request, ex: Exception) -> Response:
 
 
 http_bearer = HTTPBearer()
+
+
+def generate_inline_ref() -> str:
+    return "".join(random.choices(string.ascii_letters + string.digits, k=8))
+
+
+def get_filename_from_url(url: str) -> str:
+    parsed_url = urlparse(url)
+    filename = os.path.basename(parsed_url.path)
+    filename = unquote(filename)
+    return filename or "downloaded_file"
 
 
 @dataclass
@@ -304,7 +319,7 @@ class PoeBot:
 
     # Helpers for generating responses
     def __post_init__(self) -> None:
-        self._pending_file_attachment_tasks = {}
+        self._file_events_to_yield = {}
 
     # This overload leaves access_key as the first argument, but is deprecated.
     @overload
@@ -380,28 +395,48 @@ class PoeBot:
         if message_id is None:
             raise InvalidParameterError("message_id parameter is required")
 
-        task = asyncio.create_task(
-            self._make_file_attachment_request(
-                access_key=access_key,
-                message_id=message_id,
-                download_url=download_url,
-                download_filename=download_filename,
-                file_data=file_data,
-                filename=filename,
-                content_type=content_type,
-                is_inline=is_inline,
-                base_url=base_url,
+        name = filename or download_filename
+        if not name:
+            if not download_url:
+                raise InvalidParameterError(
+                    "filename or download_url/download_filename required"
+                )
+            else:
+                name = get_filename_from_url(download_url)
+
+        attachment_http_response = await self._make_file_attachment_request(
+            access_key=access_key,
+            message_id=message_id,
+            download_url=download_url,
+            download_filename=download_filename,
+            file_data=file_data,
+            filename=filename,
+            content_type=content_type,
+            is_inline=is_inline,
+            base_url=base_url,
+        )
+        if (
+            attachment_http_response.attachment_url is None
+            or attachment_http_response.mime_type is None
+        ):
+            raise AttachmentUploadError("Failed to upload attachment")
+        inline_ref = generate_inline_ref() if is_inline else None
+        file_events_to_yield = self._file_events_to_yield.setdefault(message_id, [])
+
+        assert name is not None  # we check this above, but pyright can't detect it
+        file_events_to_yield.append(
+            self.file_event(
+                url=attachment_http_response.attachment_url,
+                content_type=attachment_http_response.mime_type,
+                name=name,
+                inline_ref=inline_ref,
             )
         )
-        pending_tasks_for_message = self._pending_file_attachment_tasks.get(message_id)
-        if pending_tasks_for_message is None:
-            pending_tasks_for_message = set()
-            self._pending_file_attachment_tasks[message_id] = pending_tasks_for_message
-        pending_tasks_for_message.add(task)
-        try:
-            return await task
-        finally:
-            pending_tasks_for_message.remove(task)
+        return AttachmentUploadResponse(
+            attachment_url=attachment_http_response.attachment_url,
+            mime_type=attachment_http_response.mime_type,
+            inline_ref=inline_ref,
+        )
 
     async def _make_file_attachment_request(
         self,
@@ -415,7 +450,7 @@ class PoeBot:
         content_type: Optional[str] = None,
         is_inline: bool = False,
         base_url: str = POE_API_WEBSERVER_BASE_URL,
-    ) -> AttachmentUploadResponse:
+    ) -> AttachmentHttpResponse:
         if self.access_key:
             if access_key:
                 warnings.warn(
@@ -433,7 +468,7 @@ class PoeBot:
                     + " provided with an access_key when make_app is called."
                 )
             attachment_access_key = access_key
-        url = f"{base_url}file_attachment_3RD_PARTY_POST"
+        url = f"{base_url}file_upload_3RD_PARTY_POST"
 
         async with httpx.AsyncClient(timeout=120) as client:
             try:
@@ -476,25 +511,14 @@ class PoeBot:
                     )
 
                 response_data = response.json()
-                return AttachmentUploadResponse(
-                    inline_ref=response_data.get("inline_ref"),
+                return AttachmentHttpResponse(
+                    mime_type=response_data.get("mime_type"),
                     attachment_url=response_data.get("attachment_url"),
                 )
 
             except httpx.HTTPError:
                 logger.error("An HTTP error occurred when attempting to attach file")
                 raise
-
-    async def _process_pending_attachment_requests(
-        self, message_id: Identifier
-    ) -> None:
-        try:
-            await asyncio.gather(
-                *self._pending_file_attachment_tasks.pop(message_id, [])
-            )
-        except Exception:
-            logger.error("Error processing pending attachment requests")
-            raise
 
     @deprecated(
         "This method is deprecated. Use `insert_attachment_messages` instead."
@@ -774,6 +798,22 @@ class PoeBot:
         return ServerSentEvent(data=json.dumps({"text": text}), event="text")
 
     @staticmethod
+    def file_event(
+        url: str, content_type: str, name: str, inline_ref: Optional[str] = None
+    ) -> ServerSentEvent:
+        return ServerSentEvent(
+            data=json.dumps(
+                {
+                    "url": url,
+                    "content_type": content_type,
+                    "name": name,
+                    "inline_ref": inline_ref,
+                }
+            ),
+            event="file",
+        )
+
+    @staticmethod
     def data_event(metadata: str) -> ServerSentEvent:
         return ServerSentEvent(data=json.dumps({"metadata": metadata}), event="data")
 
@@ -903,9 +943,14 @@ class PoeBot:
                 allow_retry=False,
             )
         try:
-            await self._process_pending_attachment_requests(request.message_id)
+            file_events_to_yield = self._file_events_to_yield.pop(
+                request.message_id, []
+            )
+            for event in file_events_to_yield:
+                yield event
+
         except Exception as e:
-            logger.exception("Error processing pending attachment requests")
+            logger.exception("Error when sending file events.")
             yield self.error_event(
                 "The bot encountered an unexpected issue.",
                 raw_response=e,
