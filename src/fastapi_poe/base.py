@@ -51,7 +51,7 @@ from fastapi_poe.types import (
 )
 
 logger = logging.getLogger("uvicorn.default")
-POE_API_WEBSERVER_BASE_URL = "https://www.jli.main.quora.com/internal/poe_api/"
+POE_API_WEBSERVER_BASE_URL = "https://www.quora.com/poe_api/"
 
 
 class InvalidParameterError(Exception):
