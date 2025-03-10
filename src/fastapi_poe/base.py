@@ -412,6 +412,11 @@ class PoeBot:
         pending_tasks_for_message.add(task)
         try:
             attachment_upload_response = await task
+            if (
+                attachment_upload_response.attachment_url is None
+                or attachment_upload_response.mime_type is None
+            ):
+                raise AttachmentUploadError("Failed to upload attachment")
             inline_ref = None
             if is_inline:
                 inline_ref = generate_inline_ref()
@@ -419,11 +424,14 @@ class PoeBot:
             if file_events_to_yield is None:
                 file_events_to_yield = set()
                 self._file_events_to_yield[message_id] = file_events_to_yield
+
+            name = filename or download_filename
+            assert name is not None  # we check this above, but pyright can't detect it
             file_events_to_yield.add(
                 self.file_event(
                     url=attachment_upload_response.attachment_url,
                     content_type=attachment_upload_response.mime_type,
-                    name=filename or download_filename,
+                    name=name,
                     inline_ref=inline_ref,
                 )
             )

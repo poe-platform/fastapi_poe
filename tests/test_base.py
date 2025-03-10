@@ -362,7 +362,7 @@ class TestPoeBot:
             attachment_url="https://pfst.cf2.poecdn.net/base/text/test.txt",
             mime_type="text/plain",
         )
-        file_events_to_yield = basic_bot._file_events_to_yield.get("123")
+        file_events_to_yield = basic_bot._file_events_to_yield.get("123", {})
         assert len(file_events_to_yield) == 1
         assert file_events_to_yield.pop().data == json.dumps(
             {
@@ -418,7 +418,7 @@ class TestPoeBot:
             mime_type="image/png",
         )
         # Check that the file events are added to the instance dictionary
-        file_events_to_yield = basic_bot._file_events_to_yield.get("123")
+        file_events_to_yield = basic_bot._file_events_to_yield.get("123", {})
         assert len(file_events_to_yield) == 2
         expected_items = [
             {
