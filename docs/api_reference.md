@@ -97,8 +97,7 @@ from Poe. This is sent out when a user provides feedback on a response on your b
 
 ### `PoeBot.on_reaction_with_context`
 
-Override this to record reaction from the user. This also includes the request context
-information.
+Override this to record a reaction from the user. This also includes the request context.
 
 #### Parameters:
 - `reaction_request` (`ReportReactionRequest`): An object representing a reaction request
@@ -403,6 +402,19 @@ Note that only the final DataResponse object in the stream will be attached to t
 
 ---
 
+## `fp.AttachmentUploadResponse`
+
+The result of a post_message_attachment request.
+#### Fields:
+- `attachment_url` (`Optional[str]`): The URL of the attachment.
+- `mime_type` (`Optional[str]`): The MIME type of the attachment.
+- `inline_ref` (`Optional[str]`): The inline reference of the attachment.
+if post_message_attachment is called with is_inline=False, this will be None.
+
+
+
+---
+
 ## `fp.SettingsRequest`
 
 Request parameters for a settings request. Currently, this contains no fields but this
@@ -445,6 +457,19 @@ Request parameters for a report_feedback request.
 - `user_id` (`Identifier`)
 - `conversation_id` (`Identifier`)
 - `feedback_type` (`FeedbackType`)
+
+
+
+---
+
+## `fp.ReportReactionRequest`
+
+Request parameters for a report_reaction request.
+#### Fields:
+- `message_id` (`Identifier`)
+- `user_id` (`Identifier`)
+- `conversation_id` (`Identifier`)
+- `reaction` (`str`)
 
 
 

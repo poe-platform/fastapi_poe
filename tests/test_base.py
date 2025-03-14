@@ -352,17 +352,19 @@ class TestPoeBot:
                 "mime_type": "text/plain",
             },
         )
+
         result = await basic_bot.post_message_attachment(
             message_id="123",
             download_url="https://pfst.cf2.poecdn.net/base/text/test.txt",
             download_filename="test.txt",
         )
+
         assert result == AttachmentUploadResponse(
             inline_ref=None,
             attachment_url="https://pfst.cf2.poecdn.net/base/text/test.txt",
             mime_type="text/plain",
         )
-        file_events_to_yield = basic_bot._file_events_to_yield.get("123", {})
+        file_events_to_yield = basic_bot._file_events_to_yield.get("123", [])
         assert len(file_events_to_yield) == 1
         assert file_events_to_yield.pop().data == json.dumps(
             {
@@ -385,16 +387,18 @@ class TestPoeBot:
                 "mime_type": "text/plain",
             },
         )
+
         result = await basic_bot.post_message_attachment(
             message_id="123",
             download_url="https://pfst.cf2.poecdn.net/base/text/test.txt",
         )
+
         assert result == AttachmentUploadResponse(
             inline_ref=None,
             attachment_url="https://pfst.cf2.poecdn.net/base/text/test.txt",
             mime_type="text/plain",
         )
-        file_events_to_yield = basic_bot._file_events_to_yield.get("123", {})
+        file_events_to_yield = basic_bot._file_events_to_yield.get("123", [])
         assert len(file_events_to_yield) == 1
         assert file_events_to_yield.pop().data == json.dumps(
             {
@@ -419,17 +423,20 @@ class TestPoeBot:
             },
         )
         mock_generate_inline_ref.return_value = "ab32ef21"
+
         result = await basic_bot.post_message_attachment(
             message_id="123",
             download_url="https://pfst.cf2.poecdn.net/base/text/test.txt",
             download_filename="test.txt",
             is_inline=True,
         )
+
         assert result == AttachmentUploadResponse(
             inline_ref="ab32ef21",
             attachment_url="https://pfst.cf2.poecdn.net/base/text/test.txt",
             mime_type="text/plain",
         )
+
         # Add a second attachment
         mock_send.return_value = httpx.Response(
             200,
@@ -438,19 +445,21 @@ class TestPoeBot:
                 "mime_type": "image/png",
             },
         )
+
         result = await basic_bot.post_message_attachment(
             message_id="123",
             download_url="https://pfst.cf2.poecdn.net/base/image/test.png",
             download_filename="test.png",
             is_inline=False,
         )
+
         assert result == AttachmentUploadResponse(
             inline_ref=None,
             attachment_url="https://pfst.cf2.poecdn.net/base/image/test.png",
             mime_type="image/png",
         )
         # Check that the file events are added to the instance dictionary
-        file_events_to_yield = basic_bot._file_events_to_yield.get("123", {})
+        file_events_to_yield = basic_bot._file_events_to_yield.get("123", [])
         assert len(file_events_to_yield) == 2
         expected_items = [
             {

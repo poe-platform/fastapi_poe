@@ -235,6 +235,17 @@ class SettingsResponse(BaseModel):
 
 
 class AttachmentUploadResponse(BaseModel):
+    """
+
+    The result of a post_message_attachment request.
+    #### Fields:
+    - `attachment_url` (`Optional[str]`): The URL of the attachment.
+    - `mime_type` (`Optional[str]`): The MIME type of the attachment.
+    - `inline_ref` (`Optional[str]`): The inline reference of the attachment.
+    if post_message_attachment is called with is_inline=False, this will be None.
+
+    """
+
     attachment_url: Optional[str]
     mime_type: Optional[str]
     inline_ref: Optional[str]

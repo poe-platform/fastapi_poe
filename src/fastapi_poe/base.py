@@ -274,8 +274,7 @@ class PoeBot:
     ) -> None:
         """
 
-        Override this to record reaction from the user. This also includes the request context
-        information.
+        Override this to record a reaction from the user. This also includes the request context.
 
         #### Parameters:
         - `reaction_request` (`ReportReactionRequest`): An object representing a reaction request
@@ -319,7 +318,7 @@ class PoeBot:
 
     # Helpers for generating responses
     def __post_init__(self) -> None:
-        self._file_events_to_yield = {}
+        self._file_events_to_yield: dict[Identifier, list[ServerSentEvent]] = {}
 
     # This overload leaves access_key as the first argument, but is deprecated.
     @overload
@@ -894,6 +893,13 @@ class PoeBot:
         settings = await self.get_settings_with_context(settings_request, context)
         return JSONResponse(settings.dict())
 
+    async def _yield_pending_file_events(
+        self, message_id: Identifier
+    ) -> AsyncIterable[ServerSentEvent]:
+        file_events_to_yield = self._file_events_to_yield.pop(message_id, [])
+        for fe in file_events_to_yield:
+            yield fe
+
     async def handle_query(
         self, request: QueryRequest, context: RequestContext
     ) -> AsyncIterable[ServerSentEvent]:
@@ -911,6 +917,11 @@ class PoeBot:
                     query_request=request
                 )
             async for event in self.get_response_with_context(request, context):
+                # yield any pending file events from post_message_attachment first
+                async for pending_file_event in self._yield_pending_file_events(
+                    request.message_id
+                ):
+                    yield pending_file_event
                 if isinstance(event, ServerSentEvent):
                     yield event
                 elif isinstance(event, ErrorResponse):
@@ -937,20 +948,6 @@ class PoeBot:
                     yield self.text_event(event.text)
         except Exception as e:
             logger.exception("Error responding to query")
-            yield self.error_event(
-                "The bot encountered an unexpected issue.",
-                raw_response=e,
-                allow_retry=False,
-            )
-        try:
-            file_events_to_yield = self._file_events_to_yield.pop(
-                request.message_id, []
-            )
-            for event in file_events_to_yield:
-                yield event
-
-        except Exception as e:
-            logger.exception("Error when sending file events.")
             yield self.error_event(
                 "The bot encountered an unexpected issue.",
                 raw_response=e,
