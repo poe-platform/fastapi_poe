@@ -348,19 +348,136 @@ class TestPoeBot:
         mock_send.return_value = httpx.Response(
             200,
             json={
-                "inline_ref": "123",
                 "attachment_url": "https://pfst.cf2.poecdn.net/base/text/test.txt",
+                "mime_type": "text/plain",
             },
         )
+
         result = await basic_bot.post_message_attachment(
             message_id="123",
             download_url="https://pfst.cf2.poecdn.net/base/text/test.txt",
             download_filename="test.txt",
         )
+
         assert result == AttachmentUploadResponse(
-            inline_ref="123",
+            inline_ref=None,
             attachment_url="https://pfst.cf2.poecdn.net/base/text/test.txt",
+            mime_type="text/plain",
         )
+        file_events_to_yield = basic_bot._file_events_to_yield.get("123", [])
+        assert len(file_events_to_yield) == 1
+        assert file_events_to_yield.pop().data == json.dumps(
+            {
+                "url": "https://pfst.cf2.poecdn.net/base/text/test.txt",
+                "content_type": "text/plain",
+                "name": "test.txt",
+                "inline_ref": None,
+            }
+        )
+
+    @pytest.mark.asyncio
+    @patch("httpx.AsyncClient.send")
+    async def test_post_message_attachment_download_url(
+        self, mock_send: Mock, basic_bot: PoeBot
+    ) -> None:
+        mock_send.return_value = httpx.Response(
+            200,
+            json={
+                "attachment_url": "https://pfst.cf2.poecdn.net/base/text/test.txt",
+                "mime_type": "text/plain",
+            },
+        )
+
+        result = await basic_bot.post_message_attachment(
+            message_id="123",
+            download_url="https://pfst.cf2.poecdn.net/base/text/test.txt",
+        )
+
+        assert result == AttachmentUploadResponse(
+            inline_ref=None,
+            attachment_url="https://pfst.cf2.poecdn.net/base/text/test.txt",
+            mime_type="text/plain",
+        )
+        file_events_to_yield = basic_bot._file_events_to_yield.get("123", [])
+        assert len(file_events_to_yield) == 1
+        assert file_events_to_yield.pop().data == json.dumps(
+            {
+                "url": "https://pfst.cf2.poecdn.net/base/text/test.txt",
+                "content_type": "text/plain",
+                "name": "test.txt",  # extracted from url
+                "inline_ref": None,
+            }
+        )
+
+    @pytest.mark.asyncio
+    @patch("httpx.AsyncClient.send")
+    @patch("fastapi_poe.base.generate_inline_ref")
+    async def test_post_message_attachment_inline(
+        self, mock_generate_inline_ref: Mock, mock_send: Mock, basic_bot: PoeBot
+    ) -> None:
+        mock_send.return_value = httpx.Response(
+            200,
+            json={
+                "attachment_url": "https://pfst.cf2.poecdn.net/base/text/test.txt",
+                "mime_type": "text/plain",
+            },
+        )
+        mock_generate_inline_ref.return_value = "ab32ef21"
+
+        result = await basic_bot.post_message_attachment(
+            message_id="123",
+            download_url="https://pfst.cf2.poecdn.net/base/text/test.txt",
+            download_filename="test.txt",
+            is_inline=True,
+        )
+
+        assert result == AttachmentUploadResponse(
+            inline_ref="ab32ef21",
+            attachment_url="https://pfst.cf2.poecdn.net/base/text/test.txt",
+            mime_type="text/plain",
+        )
+
+        # Add a second attachment
+        mock_send.return_value = httpx.Response(
+            200,
+            json={
+                "attachment_url": "https://pfst.cf2.poecdn.net/base/image/test.png",
+                "mime_type": "image/png",
+            },
+        )
+
+        result = await basic_bot.post_message_attachment(
+            message_id="123",
+            download_url="https://pfst.cf2.poecdn.net/base/image/test.png",
+            download_filename="test.png",
+            is_inline=False,
+        )
+
+        assert result == AttachmentUploadResponse(
+            inline_ref=None,
+            attachment_url="https://pfst.cf2.poecdn.net/base/image/test.png",
+            mime_type="image/png",
+        )
+        # Check that the file events are added to the instance dictionary
+        file_events_to_yield = basic_bot._file_events_to_yield.get("123", [])
+        assert len(file_events_to_yield) == 2
+        expected_items = [
+            {
+                "url": "https://pfst.cf2.poecdn.net/base/text/test.txt",
+                "content_type": "text/plain",
+                "name": "test.txt",
+                "inline_ref": "ab32ef21",
+            },
+            {
+                "url": "https://pfst.cf2.poecdn.net/base/image/test.png",
+                "content_type": "image/png",
+                "name": "test.png",
+                "inline_ref": None,
+            },
+        ]
+        expected_items_json = {json.dumps(item) for item in expected_items}
+        actual_items_json = {file_event.data for file_event in file_events_to_yield}
+        assert expected_items_json == actual_items_json
 
     @pytest.mark.asyncio
     @patch("httpx.AsyncClient.send")

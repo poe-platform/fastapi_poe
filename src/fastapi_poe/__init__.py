@@ -19,6 +19,7 @@ __all__ = [
     "ErrorResponse",
     "MetaResponse",
     "DataResponse",
+    "AttachmentUploadResponse",
     "RequestContext",
     "ToolDefinition",
     "ToolCallDefinition",
@@ -41,6 +42,7 @@ from .client import (
 )
 from .types import (
     Attachment,
+    AttachmentUploadResponse,
     CostItem,
     DataResponse,
     ErrorResponse,

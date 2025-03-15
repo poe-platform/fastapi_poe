@@ -235,8 +235,25 @@ class SettingsResponse(BaseModel):
 
 
 class AttachmentUploadResponse(BaseModel):
-    inline_ref: Optional[str]
+    """
+
+    The result of a post_message_attachment request.
+    #### Fields:
+    - `attachment_url` (`Optional[str]`): The URL of the attachment.
+    - `mime_type` (`Optional[str]`): The MIME type of the attachment.
+    - `inline_ref` (`Optional[str]`): The inline reference of the attachment.
+    if post_message_attachment is called with is_inline=False, this will be None.
+
+    """
+
     attachment_url: Optional[str]
+    mime_type: Optional[str]
+    inline_ref: Optional[str]
+
+
+class AttachmentHttpResponse(BaseModel):
+    attachment_url: Optional[str]
+    mime_type: Optional[str]
 
 
 class DataResponse(BaseModel):
@@ -305,6 +322,9 @@ class PartialResponse(BaseModel):
 
     is_replace_response: bool = False
     """If true, this text should completely replace the previous bot text."""
+
+    attachment: Optional[Attachment] = None
+    """If the bot returns an attachment, it will be contained here."""
 
 
 class ErrorResponse(PartialResponse):
