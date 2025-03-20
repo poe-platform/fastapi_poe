@@ -917,7 +917,8 @@ class PoeBot:
                     query_request=request
                 )
             async for event in self.get_response_with_context(request, context):
-                # yield any pending file events from post_message_attachment first
+                # yield any pending file events from post_message_attachment first.
+                # this is to ensure responses with inline_ref are sent after attachment is made.
                 async for pending_file_event in self._yield_pending_file_events(
                     request.message_id
                 ):
@@ -946,6 +947,11 @@ class PoeBot:
                     yield self.replace_response_event(event.text)
                 else:
                     yield self.text_event(event.text)
+            # yield any remaining file events
+            async for pending_file_event in self._yield_pending_file_events(
+                request.message_id
+            ):
+                yield pending_file_event
         except Exception as e:
             logger.exception("Error responding to query")
             yield self.error_event(
