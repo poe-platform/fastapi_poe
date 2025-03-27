@@ -232,6 +232,7 @@ class SettingsResponse(BaseModel):
     enforce_author_role_alternation: Optional[bool] = None
     enable_multi_bot_chat_prompting: Optional[bool] = None
     custom_rate_card: Optional[str] = None
+    custom_cost_label: Optional[str] = None
 
 
 class AttachmentUploadResponse(BaseModel):
