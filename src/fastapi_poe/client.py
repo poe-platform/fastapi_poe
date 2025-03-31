@@ -695,7 +695,6 @@ def get_bot_response_sync(
             pass
 
         finally:
-            loop.run_until_complete(async_gen.aclose())
             loop.run_until_complete(loop.shutdown_asyncgens())
             loop.close()
 
