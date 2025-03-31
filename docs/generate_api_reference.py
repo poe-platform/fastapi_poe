@@ -111,6 +111,7 @@ documented_items = [
     "run",
     "stream_request",
     "get_bot_response",
+    "get_bot_response_sync",
     "get_final_response",
     "QueryRequest",
     "ProtocolMessage",

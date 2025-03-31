@@ -13,6 +13,7 @@ from fastapi_poe.client import (
     _BotContext,
     _safe_ellipsis,
     get_bot_response,
+    get_bot_response_sync,
     get_final_response,
     stream_request,
     sync_bot_settings,
@@ -579,6 +580,29 @@ async def test_get_bot_response(
 
     concatenated_text = ""
     async for message in get_bot_response(
+        mock_protocol_messages,
+        "test_bot",
+        api_key="test_api_key",
+        temperature=0.5,
+        skip_system_prompt=True,
+        logit_bias={},
+        stop_sequences=["foo"],
+    ):
+        concatenated_text += message.text
+    assert concatenated_text == "Hello, world!"
+
+
+@patch("fastapi_poe.client._BotContext.perform_query_request")
+def test_get_bot_response_sync(
+    mock_perform_query_request: Mock,
+    mock_text_only_query_response: AsyncGenerator[BotMessage, None],
+) -> None:
+    mock_perform_query_request.return_value = mock_text_only_query_response
+
+    mock_protocol_messages = [ProtocolMessage(role="user", content="Hello, world!")]
+
+    concatenated_text = ""
+    for message in get_bot_response_sync(
         mock_protocol_messages,
         "test_bot",
         api_key="test_api_key",
