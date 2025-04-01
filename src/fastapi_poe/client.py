@@ -10,7 +10,7 @@ import contextlib
 import inspect
 import json
 import warnings
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Generator
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional, Union, cast
 
@@ -576,11 +576,22 @@ def get_bot_response(
     """
 
     Use this function to invoke another Poe bot from your shell.
+
     #### Parameters:
     - `messages` (`list[ProtocolMessage]`): A list of messages representing your conversation.
     - `bot_name` (`str`): The bot that you want to invoke.
-    - `api_key` (`str`): Your Poe API key. This is available at: [poe.com/api_key](https://poe.com/api_key)
-
+    - `api_key` (`str`): Your Poe API key. Available at [poe.com/api_key](https://poe.com/api_key)
+    - `tools` (`Optional[list[ToolDefinition]] = None`): An list of ToolDefinition objects
+    describing the functions you have. This is used for OpenAI function calling.
+    - `tool_executables` (`Optional[list[Callable]] = None`): An list of functions corresponding
+    to the ToolDefinitions. This is used for OpenAI function calling.
+    - `temperature` (`Optional[float] = None`): The temperature to use for the bot.
+    - `skip_system_prompt` (`Optional[bool] = None`): Whether to skip the system prompt.
+    - `logit_bias` (`Optional[dict[str, float]] = None`): The logit bias to use for the bot.
+    - `stop_sequences` (`Optional[list[str]] = None`): The stop sequences to use for the bot.
+    - `base_url` (`str = "https://api.poe.com/bot/"`): The base URL to use for the bot. This is
+    mainly for internal testing and is not expected to be changed.
+    - `session` (`Optional[httpx.AsyncClient] = None`): The session to use for the bot.
     """
     additional_params = {}
     # This is so that we don't have to redefine the default values for these params.
@@ -611,6 +622,83 @@ def get_bot_response(
         base_url=base_url,
         session=session,
     )
+
+
+def get_bot_response_sync(
+    messages: list[ProtocolMessage],
+    bot_name: str,
+    api_key: str,
+    *,
+    tools: Optional[list[ToolDefinition]] = None,
+    tool_executables: Optional[list[Callable]] = None,
+    temperature: Optional[float] = None,
+    skip_system_prompt: Optional[bool] = None,
+    logit_bias: Optional[dict[str, float]] = None,
+    stop_sequences: Optional[list[str]] = None,
+    base_url: str = "https://api.poe.com/bot/",
+    session: Optional[httpx.AsyncClient] = None,
+) -> Generator[BotMessage, None, None]:
+    """
+
+    This function wraps the async generator `fp.get_bot_response` and returns
+    partial responses synchronously.
+
+    For asynchronous streaming, or integration into an existing event loop, use
+    `fp.get_bot_response` directly.
+
+    #### Parameters:
+    - `messages` (`list[ProtocolMessage]`): A list of messages representing your conversation.
+    - `bot_name` (`str`): The bot that you want to invoke.
+    - `api_key` (`str`): Your Poe API key. This is available at: [poe.com/api_key](https://poe.com/api_key)
+    - `tools` (`Optional[list[ToolDefinition]] = None`): An list of ToolDefinition objects
+    describing the functions you have. This is used for OpenAI function calling.
+    - `tool_executables` (`Optional[list[Callable]] = None`): An list of functions corresponding
+    to the ToolDefinitions. This is used for OpenAI function calling.
+    - `temperature` (`Optional[float] = None`): The temperature to use for the bot.
+    - `skip_system_prompt` (`Optional[bool] = None`): Whether to skip the system prompt.
+    - `logit_bias` (`Optional[dict[str, float]] = None`): The logit bias to use for the bot.
+    - `stop_sequences` (`Optional[list[str]] = None`): The stop sequences to use for the bot.
+    - `base_url` (`str = "https://api.poe.com/bot/"`): The base URL to use for the bot. This is
+    mainly for internal testing and is not expected to be changed.
+    - `session` (`Optional[httpx.AsyncClient] = None`): The session to use for the bot.
+
+    """
+
+    async def _async_generator() -> AsyncGenerator[BotMessage, None]:
+        async for partial in get_bot_response(
+            messages=messages,
+            bot_name=bot_name,
+            api_key=api_key,
+            tools=tools,
+            tool_executables=tool_executables,
+            temperature=temperature,
+            skip_system_prompt=skip_system_prompt,
+            logit_bias=logit_bias,
+            stop_sequences=stop_sequences,
+            base_url=base_url,
+            session=session,
+        ):
+            yield partial
+
+    def _sync_generator() -> Generator[BotMessage, None, None]:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        async_gen = _async_generator().__aiter__()
+        try:
+            while True:
+                # Pull one item from the async generator at a time,
+                # blocking until it’s ready.
+                yield loop.run_until_complete(async_gen.__anext__())
+
+        except StopAsyncIteration:
+            pass
+
+        finally:
+            loop.run_until_complete(loop.shutdown_asyncgens())
+            loop.close()
+
+    return _sync_generator()
 
 
 async def get_final_response(

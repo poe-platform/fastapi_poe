@@ -274,10 +274,50 @@ to the ToolDefinitions. This is used for OpenAI function calling.
 ## `fp.get_bot_response`
 
 Use this function to invoke another Poe bot from your shell.
+
+#### Parameters:
+- `messages` (`list[ProtocolMessage]`): A list of messages representing your conversation.
+- `bot_name` (`str`): The bot that you want to invoke.
+- `api_key` (`str`): Your Poe API key. Available at [poe.com/api_key](https://poe.com/api_key)
+- `tools` (`Optional[list[ToolDefinition]] = None`): An list of ToolDefinition objects
+describing the functions you have. This is used for OpenAI function calling.
+- `tool_executables` (`Optional[list[Callable]] = None`): An list of functions corresponding
+to the ToolDefinitions. This is used for OpenAI function calling.
+- `temperature` (`Optional[float] = None`): The temperature to use for the bot.
+- `skip_system_prompt` (`Optional[bool] = None`): Whether to skip the system prompt.
+- `logit_bias` (`Optional[dict[str, float]] = None`): The logit bias to use for the bot.
+- `stop_sequences` (`Optional[list[str]] = None`): The stop sequences to use for the bot.
+- `base_url` (`str = "https://api.poe.com/bot/"`): The base URL to use for the bot. This is
+mainly for internal testing and is not expected to be changed.
+- `session` (`Optional[httpx.AsyncClient] = None`): The session to use for the bot.
+
+
+
+---
+
+## `fp.get_bot_response_sync`
+
+This function wraps the async generator `fp.get_bot_response` and returns
+partial responses synchronously.
+
+For asynchronous streaming, or integration into an existing event loop, use
+`fp.get_bot_response` directly.
+
 #### Parameters:
 - `messages` (`list[ProtocolMessage]`): A list of messages representing your conversation.
 - `bot_name` (`str`): The bot that you want to invoke.
 - `api_key` (`str`): Your Poe API key. This is available at: [poe.com/api_key](https://poe.com/api_key)
+- `tools` (`Optional[list[ToolDefinition]] = None`): An list of ToolDefinition objects
+describing the functions you have. This is used for OpenAI function calling.
+- `tool_executables` (`Optional[list[Callable]] = None`): An list of functions corresponding
+to the ToolDefinitions. This is used for OpenAI function calling.
+- `temperature` (`Optional[float] = None`): The temperature to use for the bot.
+- `skip_system_prompt` (`Optional[bool] = None`): Whether to skip the system prompt.
+- `logit_bias` (`Optional[dict[str, float]] = None`): The logit bias to use for the bot.
+- `stop_sequences` (`Optional[list[str]] = None`): The stop sequences to use for the bot.
+- `base_url` (`str = "https://api.poe.com/bot/"`): The base URL to use for the bot. This is
+mainly for internal testing and is not expected to be changed.
+- `session` (`Optional[httpx.AsyncClient] = None`): The session to use for the bot.
 
 
 
