@@ -224,6 +224,7 @@ class SettingsResponse(BaseModel):
 
     context_clear_window_secs: Optional[int] = None  # deprecated
     allow_user_context_clear: Optional[bool] = None  # deprecated
+    custom_rate_card: Optional[str] = None  # deprecated
     server_bot_dependencies: dict[str, int] = Field(default_factory=dict)
     allow_attachments: Optional[bool] = None
     introduction_message: Optional[str] = None
@@ -231,7 +232,8 @@ class SettingsResponse(BaseModel):
     enable_image_comprehension: Optional[bool] = None
     enforce_author_role_alternation: Optional[bool] = None
     enable_multi_bot_chat_prompting: Optional[bool] = None
-    custom_rate_card: Optional[str] = None
+    rate_card: Optional[str] = None
+    cost_label: Optional[str] = None
 
 
 class AttachmentUploadResponse(BaseModel):
