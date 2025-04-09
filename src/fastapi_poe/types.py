@@ -1,7 +1,7 @@
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from fastapi import Request
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing_extensions import Literal, TypeAlias
 
 Identifier: TypeAlias = str
@@ -36,6 +36,17 @@ class CostItem(BaseModel):
 
     amount_usd_milli_cents: int
     description: Optional[str] = None
+
+    @field_validator("amount_usd_milli_cents", mode="before")
+    def validate_amount_is_int(cls, v: Union[int, str, float]) -> int:
+        if not isinstance(v, int):
+            raise ValueError(
+                "Invalid amount: expected an integer for amount_usd_milli_cents, "
+                f"got {type(v)}. Please provide the amount in milli-cents "
+                "(1/1000 of a cent) as a whole number. If you're working with a "
+                "decimal value, consider using math.ceil() to round up."
+            )
+        return v
 
 
 class Attachment(BaseModel):
@@ -224,6 +235,7 @@ class SettingsResponse(BaseModel):
 
     context_clear_window_secs: Optional[int] = None  # deprecated
     allow_user_context_clear: Optional[bool] = None  # deprecated
+    custom_rate_card: Optional[str] = None  # deprecated
     server_bot_dependencies: dict[str, int] = Field(default_factory=dict)
     allow_attachments: Optional[bool] = None
     introduction_message: Optional[str] = None
@@ -231,7 +243,8 @@ class SettingsResponse(BaseModel):
     enable_image_comprehension: Optional[bool] = None
     enforce_author_role_alternation: Optional[bool] = None
     enable_multi_bot_chat_prompting: Optional[bool] = None
-    custom_rate_card: Optional[str] = None
+    rate_card: Optional[str] = None
+    cost_label: Optional[str] = None
 
 
 class AttachmentUploadResponse(BaseModel):
