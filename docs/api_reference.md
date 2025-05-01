@@ -588,6 +588,3 @@ when using OpenAI function calling.
 - `name` (`str`)
 - `tool_call_id` (`str`)
 - `content` (`str`)
-
-
-
