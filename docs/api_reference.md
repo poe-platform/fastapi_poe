@@ -468,9 +468,12 @@ might get updated in the future.
 
 An object representing your bot's response to a settings object.
 #### Fields:
+- `response_version` (`int = 1`): Different Poe Protocol versions use different default settings
+values. When provided, Poe will use the default values for the specified response version.
+If not provided, Poe will use the default values for response version 0.
 - `server_bot_dependencies` (`dict[str, int] = {}`): Information about other bots that your bot
 uses. This is used to facilitate the Bot Query API.
-- `allow_attachments` (`bool = False`): Whether to allow users to upload attachments to your
+- `allow_attachments` (`bool = True`): Whether to allow users to upload attachments to your
 bot.
 - `introduction_message` (`str = ""`): The introduction message to display to the users of your
 bot.
@@ -482,7 +485,7 @@ images.
 - `enforce_author_role_alternation` (`bool = False`): If enabled, Poe will concatenate messages
 so that they follow role alternation, which is a requirement for certain LLM providers like
 Anthropic.
- - `enable_multi_bot_chat_prompting` (`bool = False`): If enabled, Poe will combine previous bot
+ - `enable_multi_bot_chat_prompting` (`bool = True`): If enabled, Poe will combine previous bot
  messages if there is a multibot context.
 
 

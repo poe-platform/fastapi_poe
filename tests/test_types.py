@@ -1,6 +1,13 @@
 import pydantic
 import pytest
-from fastapi_poe.types import CostItem, PartialResponse
+from fastapi_poe.types import CostItem, PartialResponse, SettingsResponse
+
+
+class TestSettingsResponse:
+
+    def test_default_response_version(self) -> None:
+        response = SettingsResponse()
+        assert response.response_version == 1
 
 
 def test_extra_attrs() -> None:

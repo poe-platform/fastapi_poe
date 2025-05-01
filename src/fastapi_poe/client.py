@@ -31,7 +31,7 @@ from .types import (
 from .types import MetaResponse as MetaMessage
 from .types import PartialResponse as BotMessage
 
-PROTOCOL_VERSION = "1.0"
+PROTOCOL_VERSION = "1.1"
 MESSAGE_LENGTH_LIMIT = 10_000
 
 IDENTIFIER_LENGTH = 32
