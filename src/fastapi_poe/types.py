@@ -7,7 +7,9 @@ from typing_extensions import Literal, TypeAlias
 Identifier: TypeAlias = str
 FeedbackType: TypeAlias = Literal["like", "dislike"]
 ContentType: TypeAlias = Literal["text/markdown", "text/plain"]
-ErrorType: TypeAlias = Literal["user_message_too_long", "insufficient_fund", "user_caused_error"]
+ErrorType: TypeAlias = Literal[
+    "user_message_too_long", "insufficient_fund", "user_caused_error"
+]
 
 
 class MessageFeedback(BaseModel):
