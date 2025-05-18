@@ -144,7 +144,7 @@ class PoeBot:
     file output that mandate an `access_key` will not be available for your bot.
     - `should_insert_attachment_messages` (`bool = True`): A flag to decide whether to parse out
     content from attachments and insert them as messages into the conversation. This is set to
-    `True`by default and we recommend leaving on since it allows your bot to comprehend attachments
+    `True` by default and we recommend leaving on since it allows your bot to comprehend attachments
     uploaded by users by default.
     - `concat_attachments_to_message` (`bool = False`): **DEPRECATED**: Please set
     `should_insert_attachment_messages` instead.
@@ -245,7 +245,7 @@ class PoeBot:
 
         Override this to record feedback from the user.
         #### Parameters:
-        - `feedback_request` (`ReportFeedbackRequest`): An object representing the Feedback rqeuest
+        - `feedback_request` (`ReportFeedbackRequest`): An object representing the Feedback request
         from Poe. This is sent out when a user provides feedback on a response on your bot.
         #### Returns: `None`
 
@@ -261,7 +261,7 @@ class PoeBot:
         default, this will call `on_feedback`.
 
         #### Parameters:
-        - `feedback_request` (`ReportFeedbackRequest`): An object representing a feedback rqeuest
+        - `feedback_request` (`ReportFeedbackRequest`): An object representing a feedback request
         from Poe. This is sent out when a user provides feedback on a response on your bot.
         - `context` (`RequestContext`): an object representing the current HTTP request.
         #### Returns: `None`
