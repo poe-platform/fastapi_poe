@@ -17,6 +17,7 @@ from fastapi_poe.client import (
     get_final_response,
     stream_request,
     sync_bot_settings,
+    upload_file,
 )
 from fastapi_poe.types import MetaResponse as MetaMessage
 from fastapi_poe.types import PartialResponse as BotMessage
@@ -657,3 +658,65 @@ def test_sync_bot_settings(mock_httpx_post: Mock) -> None:
     mock_httpx_post.side_effect = httpx.ReadTimeout("timeout")
     with pytest.raises(BotError):
         sync_bot_settings("test_bot", access_key="test_access_key")
+
+
+@pytest.mark.asyncio
+async def test_upload_file(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Verifies that:
+      • `upload_file` returns a correctly-populated `Attachment`
+      • No real network request is made
+      • The correct request payload is built (download_url /
+        download_filename)
+    """
+
+    expected_json: dict[str, Any] = {
+        "attachment_url": "https://cdn.example.com/fake-id/file.txt",
+        "mime_type": "text/plain",
+    }
+    captured_request: dict[str, httpx.Request] = {}
+
+    async def fake_send(self: "DummyClient", request: httpx.Request) -> httpx.Response:
+        """
+        It stores the request object so we can assert on it later,
+        and returns a canned 200 response with `expected_json`.
+        """
+        captured_request["request"] = request
+        return httpx.Response(status_code=200, json=expected_json)
+
+    class DummyClient:
+        def __init__(self, *args: Any, **kwargs: Any) -> None: ...  # noqa: ANN401
+
+        async def __aenter__(self) -> "DummyClient":
+            return self
+
+        async def __aexit__(
+            self, exc_type: Any, exc: Any, tb: Any  # noqa: ANN401
+        ) -> bool:
+            return False
+
+        def build_request(
+            self, *args: Any, **kwargs: Any  # noqa: ANN401
+        ) -> httpx.Request:
+            return httpx.Request(*args, **kwargs)
+
+        send = fake_send
+
+    monkeypatch.setattr(httpx, "AsyncClient", DummyClient)
+
+    attachment = await upload_file(
+        file_url="https://example.com/file.txt",
+        file_name="file.txt",
+        api_key="secret-key",
+    )
+
+    # 1. The function returned the correct Attachment instance
+    assert attachment.url == expected_json["attachment_url"]
+    assert attachment.content_type == expected_json["mime_type"]
+    assert attachment.name == "file.txt"
+
+    # 2. It built the expected HTTP request
+    request = captured_request["request"]
+    assert request.url.path.endswith("/file_upload_3RD_PARTY_POST")
+    assert request.method == "POST"
+    assert request.headers["Authorization"] == "secret-key"

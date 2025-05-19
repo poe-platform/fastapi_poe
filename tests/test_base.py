@@ -7,14 +7,8 @@ from unittest.mock import AsyncMock, Mock, patch
 import httpx
 import pytest
 from fastapi import Request
-from fastapi_poe.base import (
-    AttachmentUploadError,
-    CostRequestError,
-    InsufficientFundError,
-    InvalidParameterError,
-    PoeBot,
-    make_app,
-)
+from fastapi_poe.base import CostRequestError, InsufficientFundError, PoeBot, make_app
+from fastapi_poe.client import AttachmentUploadError
 from fastapi_poe.templates import (
     IMAGE_VISION_ATTACHMENT_TEMPLATE,
     TEXT_ATTACHMENT_TEMPLATE,
@@ -492,7 +486,7 @@ class TestPoeBot:
                 download_filename="test.txt",
             )
 
-        with pytest.raises(InvalidParameterError):
+        with pytest.raises(ValueError):
             await basic_bot.post_message_attachment(
                 message_id="123",
                 download_url="https://pfst.cf2.poecdn.net/base/text/test.txt",
