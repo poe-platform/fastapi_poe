@@ -868,7 +868,7 @@ async def upload_file(
         if response.status_code != 200:
             # collect full error text (endpoint streams errors)
             try:
-                err_txt = "".join([p async for p in response.aiter_text()])
+                err_txt = await response.aread()
             except Exception:
                 err_txt = response.text
             raise AttachmentUploadError(
@@ -886,8 +886,8 @@ async def upload_file(
         )
 
     # retry wrapper
-    async with httpx.AsyncClient(timeout=120) as owned_session:
-        _sess = session or owned_session
+    _sess = session or httpx.AsyncClient(timeout=120)
+    async with _sess:
         for attempt in range(num_tries):
             try:
                 return await _do_upload(_sess)

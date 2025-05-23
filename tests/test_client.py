@@ -661,7 +661,7 @@ def test_sync_bot_settings(mock_httpx_post: Mock) -> None:
 
 
 @pytest.mark.asyncio
-async def test_upload_file(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_upload_file() -> None:
     """
     Verifies that:
       • `upload_file` returns a correctly-populated `Attachment`
@@ -676,47 +676,47 @@ async def test_upload_file(monkeypatch: pytest.MonkeyPatch) -> None:
     }
     captured_request: dict[str, httpx.Request] = {}
 
-    async def fake_send(self: "DummyClient", request: httpx.Request) -> httpx.Response:
+    async def fake_send(request: httpx.Request) -> httpx.Response:
         """
         It stores the request object so we can assert on it later,
         and returns a canned 200 response with `expected_json`.
         """
         captured_request["request"] = request
-        return httpx.Response(status_code=200, json=expected_json)
+        return httpx.Response(
+            status_code=200,
+            content=json.dumps(expected_json).encode(),
+            headers={"content-type": "application/json"},
+        )
 
-    class DummyClient:
-        def __init__(self, *args: Any, **kwargs: Any) -> None: ...  # noqa: ANN401
+    with patch("httpx.AsyncClient") as mock_async_client:
+        # Create a mock client instance
+        mock_client_instance = AsyncMock()
 
-        async def __aenter__(self) -> "DummyClient":
-            return self
+        # Properly mock the context manager
+        mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
+        mock_client_instance.__aexit__ = AsyncMock(return_value=None)
 
-        async def __aexit__(
-            self, exc_type: Any, exc: Any, tb: Any  # noqa: ANN401
-        ) -> bool:
-            return False
+        # Mock the methods
+        mock_client_instance.build_request = Mock(
+            side_effect=lambda *args, **kwargs: httpx.Request(*args, **kwargs)
+        )
+        mock_client_instance.send = AsyncMock(side_effect=fake_send)
 
-        def build_request(
-            self, *args: Any, **kwargs: Any  # noqa: ANN401
-        ) -> httpx.Request:
-            return httpx.Request(*args, **kwargs)
+        mock_async_client.return_value = mock_client_instance
 
-        send = fake_send
+        attachment = await upload_file(
+            file_url="https://example.com/file.txt",
+            file_name="file.txt",
+            api_key="secret-key",
+        )
 
-    monkeypatch.setattr(httpx, "AsyncClient", DummyClient)
+        # 1. The function returned the correct Attachment instance
+        assert attachment.url == expected_json["attachment_url"]
+        assert attachment.content_type == expected_json["mime_type"]
+        assert attachment.name == "file.txt"
 
-    attachment = await upload_file(
-        file_url="https://example.com/file.txt",
-        file_name="file.txt",
-        api_key="secret-key",
-    )
-
-    # 1. The function returned the correct Attachment instance
-    assert attachment.url == expected_json["attachment_url"]
-    assert attachment.content_type == expected_json["mime_type"]
-    assert attachment.name == "file.txt"
-
-    # 2. It built the expected HTTP request
-    request = captured_request["request"]
-    assert request.url.path.endswith("/file_upload_3RD_PARTY_POST")
-    assert request.method == "POST"
-    assert request.headers["Authorization"] == "secret-key"
+        # 2. It built the expected HTTP request
+        request = captured_request["request"]
+        assert request.url.path.endswith("/file_upload_3RD_PARTY_POST")
+        assert request.method == "POST"
+        assert request.headers["Authorization"] == "secret-key"
