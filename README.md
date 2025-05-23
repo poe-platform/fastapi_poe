@@ -3,6 +3,14 @@
 An implementation of the
 [Poe protocol](https://creator.poe.com/docs/poe-protocol-specification) using FastAPI.
 
+### Installation
+
+Install the package from PyPI:
+
+```bash
+pip install fastapi-poe
+```
+
 ### Write your own bot
 
 This package can also be used as a base to write your own bot. You can inherit from
