@@ -26,7 +26,12 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import Message
 from typing_extensions import deprecated, overload
 
-from fastapi_poe.client import PROTOCOL_VERSION, sync_bot_settings, upload_file
+from fastapi_poe.client import (
+    PROTOCOL_VERSION,
+    AttachmentUploadError,
+    sync_bot_settings,
+    upload_file,
+)
 from fastapi_poe.templates import (
     IMAGE_VISION_ATTACHMENT_TEMPLATE,
     TEXT_ATTACHMENT_TEMPLATE,
@@ -428,7 +433,7 @@ class PoeBot:
         )
 
         if attachment.url is None or attachment.content_type is None:
-            raise RuntimeError("Failed to upload attachment")
+            raise AttachmentUploadError("Failed to upload attachment")
         inline_ref = generate_inline_ref() if is_inline else None
         file_events_to_yield = self._file_events_to_yield.setdefault(message_id, [])
 

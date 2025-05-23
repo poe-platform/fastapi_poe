@@ -834,7 +834,7 @@ async def upload_file(
                 raise ValueError(
                     "`file_name` is mandatory when file object has no name attribute."
                 )
-        elif isinstance(file, (bytes, bytearray, memoryview)):
+        elif isinstance(file, (bytes, bytearray)):
             raise ValueError("`file_name` is mandatory when sending raw bytes.")
         else:
             raise ValueError("unsupported file type")
