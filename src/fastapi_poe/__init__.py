@@ -30,6 +30,7 @@ __all__ = [
     "CostItem",
     "InsufficientFundError",
     "CostRequestError",
+    "upload_file",
 ]
 
 from .base import CostRequestError, InsufficientFundError, PoeBot, make_app, run
@@ -41,6 +42,7 @@ from .client import (
     get_final_response,
     stream_request,
     sync_bot_settings,
+    upload_file,
 )
 from .types import (
     Attachment,

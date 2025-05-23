@@ -131,9 +131,7 @@ bot.
 Used to output an attachment in your bot's response.
 
 #### Parameters:
-- `message_id` (`Identifier`): The message id associated with the current QueryRequest
-object. **Important**: This must be the request that is currently being handled by
-get_response. Attempting to attach files to previously handled requests will fail.
+- `message_id` (`Identifier`): The message id associated with the current QueryRequest.
 - `download_url` (`Optional[str] = None`): A url to the file to be attached to the message.
 - `download_filename` (`Optional[str] = None`): A filename to be used when storing the
 downloaded attachment. If not set, the filename from the `download_url` is used.
