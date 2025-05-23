@@ -1,3 +1,7 @@
 __pycache__/
 .DS_Store
 .coverage
+.venv/
+poetry.lock
+docs/openapi.json
+docs/openapi_endpoints.md

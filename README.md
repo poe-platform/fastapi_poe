@@ -53,3 +53,16 @@ if __name__ == "__main__":
 Check out our starter code
 [repository](https://github.com/poe-platform/server-bot-quick-start) for some examples
 you can use to get started with bot development.
+### Documentation
+
+To regenerate the API reference or OpenAPI specification, run:
+
+```bash
+pip install -e .
+python docs/generate_api_reference.py
+python docs/generate_openapi_spec.py
+```
+
+This writes `docs/openapi.json` and a human-friendly overview at
+`docs/openapi_endpoints.md`.
+
