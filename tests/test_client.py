@@ -657,3 +657,153 @@ def test_sync_bot_settings(mock_httpx_post: Mock) -> None:
     mock_httpx_post.side_effect = httpx.ReadTimeout("timeout")
     with pytest.raises(BotError):
         sync_bot_settings("test_bot", access_key="test_access_key")
+
+
+class TestPoeClient:
+    @patch("fastapi_poe.client.get_bot_response_sync")
+    def test_poe_sync_create_basic(self, mock_get_bot_response_sync: Mock) -> None:
+        # Test basic string input
+        client = Poe(api_key="test_api_key")
+        
+        # Mock the generator to return bot messages
+        mock_get_bot_response_sync.return_value = [
+            BotMessage(text="Hello"),
+            BotMessage(text=" there!"),
+        ]
+        
+        result = client.messages.create(
+            model="GPT-3.5-Turbo",
+            input="Tell me a story"
+        )
+        
+        assert result == "Hello there!"
+        mock_get_bot_response_sync.assert_called_once()
+        args, kwargs = mock_get_bot_response_sync.call_args
+        assert kwargs["bot_name"] == "GPT-3.5-Turbo"
+        assert kwargs["api_key"] == "test_api_key"
+        assert len(kwargs["messages"]) == 1
+        assert kwargs["messages"][0].role == "user"
+        assert kwargs["messages"][0].content == "Tell me a story"
+    
+    @patch("fastapi_poe.client.get_bot_response_sync")
+    def test_poe_sync_create_with_messages(self, mock_get_bot_response_sync: Mock) -> None:
+        # Test with message list input
+        client = Poe(api_key="test_api_key")
+        
+        mock_get_bot_response_sync.return_value = [
+            BotMessage(text="Response"),
+        ]
+        
+        result = client.messages.create(
+            model="GPT-3.5-Turbo",
+            input=[
+                {"role": "system", "content": "You are helpful"},
+                {"role": "user", "content": "Hello"},
+            ]
+        )
+        
+        assert result == "Response"
+        args, kwargs = mock_get_bot_response_sync.call_args
+        assert len(kwargs["messages"]) == 2
+        assert kwargs["messages"][0].role == "system"
+        assert kwargs["messages"][0].content == "You are helpful"
+        assert kwargs["messages"][1].role == "user"
+        assert kwargs["messages"][1].content == "Hello"
+    
+    @patch("fastapi_poe.client.get_bot_response_sync")
+    def test_poe_sync_create_streaming(self, mock_get_bot_response_sync: Mock) -> None:
+        # Test streaming response
+        client = Poe(api_key="test_api_key")
+        
+        mock_messages = [
+            BotMessage(text="Hello"),
+            BotMessage(text=" there!"),
+        ]
+        mock_get_bot_response_sync.return_value = mock_messages
+        
+        stream = client.messages.create(
+            model="GPT-3.5-Turbo",
+            input="Tell me a story",
+            stream=True
+        )
+        
+        # Stream should return the generator directly
+        assert stream == mock_messages
+
+
+@pytest.mark.asyncio
+class TestPoeAsyncClient:
+    @patch("fastapi_poe.client.get_bot_response")
+    async def test_poe_async_create_basic(self, mock_get_bot_response: Mock) -> None:
+        # Test basic string input
+        client = PoeAsync(api_key="test_api_key")
+        
+        # Mock the async generator
+        async def mock_generator():
+            yield BotMessage(text="Hello")
+            yield BotMessage(text=" async!")
+        
+        mock_get_bot_response.return_value = mock_generator()
+        
+        result = await client.messages.create(
+            model="GPT-3.5-Turbo",
+            input="Tell me a story"
+        )
+        
+        assert result == "Hello async!"
+        mock_get_bot_response.assert_called_once()
+        args, kwargs = mock_get_bot_response.call_args
+        assert kwargs["bot_name"] == "GPT-3.5-Turbo"
+        assert kwargs["api_key"] == "test_api_key"
+        assert len(kwargs["messages"]) == 1
+        assert kwargs["messages"][0].role == "user"
+        assert kwargs["messages"][0].content == "Tell me a story"
+    
+    @patch("fastapi_poe.client.get_bot_response")
+    async def test_poe_async_create_streaming(self, mock_get_bot_response: Mock) -> None:
+        # Test streaming response
+        client = PoeAsync(api_key="test_api_key")
+        
+        async def mock_generator():
+            yield BotMessage(text="Hello")
+            yield BotMessage(text=" async!")
+        
+        mock_get_bot_response.return_value = mock_generator()
+        
+        stream = await client.messages.create(
+            model="GPT-3.5-Turbo",
+            input="Tell me a story",
+            stream=True
+        )
+        
+        # Should return the async generator directly
+        result_text = ""
+        async for msg in stream:
+            result_text += msg.text
+        assert result_text == "Hello async!"
+    
+    @patch("fastapi_poe.client.get_bot_response")
+    async def test_poe_async_with_parameters(self, mock_get_bot_response: Mock) -> None:
+        # Test with additional parameters
+        client = PoeAsync(api_key="test_api_key")
+        
+        async def mock_generator():
+            yield BotMessage(text="Response")
+        
+        mock_get_bot_response.return_value = mock_generator()
+        
+        result = await client.messages.create(
+            model="GPT-3.5-Turbo",
+            input="Hello",
+            temperature=0.7,
+            skip_system_prompt=True,
+            logit_bias={"test": 0.5},
+            stop_sequences=["STOP"]
+        )
+        
+        assert result == "Response"
+        args, kwargs = mock_get_bot_response.call_args
+        assert kwargs["temperature"] == 0.7
+        assert kwargs["skip_system_prompt"] is True
+        assert kwargs["logit_bias"] == {"test": 0.5}
+        assert kwargs["stop_sequences"] == ["STOP"]

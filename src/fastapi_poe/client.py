@@ -782,3 +782,181 @@ def sync_bot_settings(
             error_message += " Check that the bot server is running."
         raise BotError(error_message) from e
     print(response.text)
+
+
+class Messages:
+    """Messages API for creating bot requests."""
+    
+    def __init__(self, client: "Poe"):
+        self._client = client
+    
+    def create(
+        self,
+        *,
+        model: str,
+        input: Union[str, list[dict[str, str]]],
+        temperature: Optional[float] = None,
+        skip_system_prompt: Optional[bool] = None,
+        logit_bias: Optional[dict[str, float]] = None,
+        stop_sequences: Optional[list[str]] = None,
+        stream: bool = False,
+    ) -> Union[Generator[BotMessage, None, None], str]:
+        """Create a message request to a bot.
+        
+        Args:
+            model: The bot name to send the request to
+            input: Either a string prompt or a list of message dicts with 'role' and 'content'
+            temperature: Optional temperature parameter
+            skip_system_prompt: Whether to skip system prompts
+            logit_bias: Optional logit bias dict
+            stop_sequences: Optional list of stop sequences  
+            stream: If True, returns a generator that yields BotMessage objects
+            
+        Returns:
+            If stream=False: Complete response as a string
+            If stream=True: Generator yielding BotMessage objects (with .text attribute)
+        """
+        messages = self._prepare_messages(input)
+        
+        if stream:
+            return get_bot_response_sync(
+                messages=messages,
+                bot_name=model,
+                api_key=self._client.api_key,
+                temperature=temperature,
+                skip_system_prompt=skip_system_prompt,
+                logit_bias=logit_bias,
+                stop_sequences=stop_sequences,
+                base_url=self._client.base_url,
+            )
+        else:
+            chunks = []
+            for partial in get_bot_response_sync(
+                messages=messages,
+                bot_name=model,
+                api_key=self._client.api_key,
+                temperature=temperature,
+                skip_system_prompt=skip_system_prompt,
+                logit_bias=logit_bias,
+                stop_sequences=stop_sequences,
+                base_url=self._client.base_url,
+            ):
+                if hasattr(partial, 'text'):
+                    chunks.append(partial.text)
+            return "".join(chunks)
+    
+    def _prepare_messages(self, input: Union[str, list[dict[str, str]]]) -> list[ProtocolMessage]:
+        """Convert input to list of ProtocolMessage objects."""
+        if isinstance(input, str):
+            return [ProtocolMessage(role="user", content=input)]
+        else:
+            messages = []
+            for msg in input:
+                role = msg.get("role", "user")
+                if role not in ["system", "user", "bot"]:
+                    role = "user"
+                messages.append(
+                    ProtocolMessage(
+                        role=role,
+                        content=msg["content"]
+                    )
+                )
+            return messages
+
+
+class Poe:
+    """Synchronous Poe client."""
+    
+    def __init__(self, api_key: str, base_url: str = "https://api.poe.com/bot/"):
+        self.api_key = api_key
+        self.base_url = base_url
+        self.messages = Messages(self)
+
+
+class MessagesAsync:
+    """Async Messages API for creating bot requests."""
+    
+    def __init__(self, client: "PoeAsync"):
+        self._client = client
+    
+    async def create(
+        self,
+        *,
+        model: str,
+        input: Union[str, list[dict[str, str]]],
+        temperature: Optional[float] = None,
+        skip_system_prompt: Optional[bool] = None,
+        logit_bias: Optional[dict[str, float]] = None,
+        stop_sequences: Optional[list[str]] = None,
+        stream: bool = False,
+    ) -> Union[AsyncGenerator[BotMessage, None], str]:
+        """Create a message request to a bot.
+        
+        Args:
+            model: The bot name to send the request to
+            input: Either a string prompt or a list of message dicts with 'role' and 'content'
+            temperature: Optional temperature parameter
+            skip_system_prompt: Whether to skip system prompts
+            logit_bias: Optional logit bias dict
+            stop_sequences: Optional list of stop sequences  
+            stream: If True, returns an async generator that yields BotMessage objects
+            
+        Returns:
+            If stream=False: Complete response as a string
+            If stream=True: Async generator yielding BotMessage objects (with .text attribute)
+        """
+        messages = self._prepare_messages(input)
+        
+        if stream:
+            return get_bot_response(
+                messages=messages,
+                bot_name=model,
+                api_key=self._client.api_key,
+                temperature=temperature,
+                skip_system_prompt=skip_system_prompt,
+                logit_bias=logit_bias,
+                stop_sequences=stop_sequences,
+                base_url=self._client.base_url,
+            )
+        else:
+            chunks = []
+            async for partial in get_bot_response(
+                messages=messages,
+                bot_name=model,
+                api_key=self._client.api_key,
+                temperature=temperature,
+                skip_system_prompt=skip_system_prompt,
+                logit_bias=logit_bias,
+                stop_sequences=stop_sequences,
+                base_url=self._client.base_url,
+            ):
+                if hasattr(partial, 'text'):
+                    chunks.append(partial.text)
+            return "".join(chunks)
+    
+    def _prepare_messages(self, input: Union[str, list[dict[str, str]]]) -> list[ProtocolMessage]:
+        """Convert input to list of ProtocolMessage objects."""
+        if isinstance(input, str):
+            return [ProtocolMessage(role="user", content=input)]
+        else:
+            messages = []
+            for msg in input:
+                role = msg.get("role", "user")
+                if role not in ["system", "user", "bot"]:
+                    role = "user"
+                messages.append(
+                    ProtocolMessage(
+                        role=role,
+                        content=msg["content"]
+                    )
+                )
+            return messages
+
+
+class PoeAsync:
+    """Asynchronous Poe client."""
+    
+    def __init__(self, api_key: str, base_url: str = "https://api.poe.com/bot/"):
+        self.api_key = api_key
+        self.base_url = base_url
+        self.messages = MessagesAsync(self)
