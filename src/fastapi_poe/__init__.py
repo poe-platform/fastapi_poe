@@ -30,12 +30,16 @@ __all__ = [
     "CostItem",
     "InsufficientFundError",
     "CostRequestError",
+    "Poe",
+    "PoeAsync",
 ]
 
 from .base import CostRequestError, InsufficientFundError, PoeBot, make_app, run
 from .client import (
     BotError,
     BotErrorNoRetry,
+    Poe,
+    PoeAsync,
     get_bot_response,
     get_bot_response_sync,
     get_final_response,
