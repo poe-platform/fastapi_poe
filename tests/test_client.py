@@ -688,17 +688,16 @@ async def test_upload_file_via_url() -> None:
         "attachment_url": "https://cdn.example.com/fake-id/file.txt",
         "mime_type": "text/plain",
     }
-    captured: dict[str, httpx.Request] = {}
 
     async def fake_send(request: httpx.Request) -> httpx.Response:
-        captured["request"] = request
         return httpx.Response(
             status_code=200,
             content=json.dumps(expected_json).encode(),
             headers={"content-type": "application/json"},
         )
 
-    with patch("httpx.AsyncClient", return_value=_make_mock_async_client(fake_send)):
+    mock_client = _make_mock_async_client(fake_send)
+    with patch("httpx.AsyncClient", return_value=mock_client):
         attachment = await upload_file(
             file_url="https://example.com/file.txt",
             file_name="file.txt",
@@ -711,7 +710,8 @@ async def test_upload_file_via_url() -> None:
     assert attachment.name == "file.txt"
 
     # HTTP request
-    req = captured["request"]
+    send_mock: AsyncMock = cast(AsyncMock, mock_client.send)  # satisfy pyright
+    req: httpx.Request = send_mock.call_args.args[0]
     assert req.url.path.endswith("/file_upload_3RD_PARTY_POST")
     assert req.method == "POST"
     assert req.headers["Authorization"] == "secret-key"
@@ -723,17 +723,16 @@ async def test_upload_file_raw_bytes() -> None:
         "attachment_url": "https://cdn.example.com/fake-id/hello.txt",
         "mime_type": "text/plain",
     }
-    captured: dict[str, httpx.Request] = {}
 
     async def fake_send(request: httpx.Request) -> httpx.Response:
-        captured["request"] = request
         return httpx.Response(
             status_code=200,
             content=json.dumps(expected_json).encode(),
             headers={"content-type": "application/json"},
         )
 
-    with patch("httpx.AsyncClient", return_value=_make_mock_async_client(fake_send)):
+    mock_client = _make_mock_async_client(fake_send)
+    with patch("httpx.AsyncClient", return_value=mock_client):
         attachment = await upload_file(
             file=b"hello world", file_name="hello.txt", api_key="secret-key"
         )
@@ -744,7 +743,8 @@ async def test_upload_file_raw_bytes() -> None:
     assert attachment.name == "hello.txt"
 
     # HTTP request
-    req = captured["request"]
+    send_mock: AsyncMock = cast(AsyncMock, mock_client.send)  # satisfy pyright
+    req: httpx.Request = send_mock.call_args.args[0]
     assert req.headers["Authorization"] == "secret-key"
     assert req.headers["Content-Type"].startswith("multipart/form-data")
 
