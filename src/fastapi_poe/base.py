@@ -26,14 +26,13 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import Message
 from typing_extensions import deprecated, overload
 
-from fastapi_poe.client import PROTOCOL_VERSION, sync_bot_settings
+from fastapi_poe.client import PROTOCOL_VERSION, sync_bot_settings, upload_file
 from fastapi_poe.templates import (
     IMAGE_VISION_ATTACHMENT_TEMPLATE,
     TEXT_ATTACHMENT_TEMPLATE,
     URL_ATTACHMENT_TEMPLATE,
 )
 from fastapi_poe.types import (
-    AttachmentHttpResponse,
     AttachmentUploadResponse,
     ContentType,
     CostItem,
@@ -57,10 +56,6 @@ POE_API_WEBSERVER_BASE_URL = "https://www.quora.com/poe_api/"
 
 
 class InvalidParameterError(Exception):
-    pass
-
-
-class AttachmentUploadError(Exception):
     pass
 
 
@@ -323,7 +318,7 @@ class PoeBot:
     # This overload leaves access_key as the first argument, but is deprecated.
     @overload
     @deprecated(
-        "The access_key parameter is deprecated. "
+        "The access_key and content_type parameters are deprecated. "
         "Set the access_key when creating the Bot object instead."
     )
     async def post_message_attachment(
@@ -350,7 +345,6 @@ class PoeBot:
         download_filename: Optional[str] = None,
         file_data: Optional[Union[bytes, BinaryIO]] = None,
         filename: Optional[str] = None,
-        content_type: Optional[str] = None,
         is_inline: bool = False,
         base_url: str = POE_API_WEBSERVER_BASE_URL,
     ) -> AttachmentUploadResponse: ...
@@ -373,9 +367,7 @@ class PoeBot:
         Used to output an attachment in your bot's response.
 
         #### Parameters:
-        - `message_id` (`Identifier`): The message id associated with the current QueryRequest
-        object. **Important**: This must be the request that is currently being handled by
-        get_response. Attempting to attach files to previously handled requests will fail.
+        - `message_id` (`Identifier`): The message id associated with the current QueryRequest.
         - `download_url` (`Optional[str] = None`): A url to the file to be attached to the message.
         - `download_filename` (`Optional[str] = None`): A filename to be used when storing the
         downloaded attachment. If not set, the filename from the `download_url` is used.
@@ -391,9 +383,8 @@ class PoeBot:
         `filename`.
 
         """
-        if message_id is None:
-            raise InvalidParameterError("message_id parameter is required")
 
+        assert message_id is not None, "message_id parameter is required"
         name = filename or download_filename
         if not name:
             if not download_url:
@@ -403,53 +394,6 @@ class PoeBot:
             else:
                 name = get_filename_from_url(download_url)
 
-        attachment_http_response = await self._make_file_attachment_request(
-            access_key=access_key,
-            message_id=message_id,
-            download_url=download_url,
-            download_filename=download_filename,
-            file_data=file_data,
-            filename=filename,
-            content_type=content_type,
-            is_inline=is_inline,
-            base_url=base_url,
-        )
-        if (
-            attachment_http_response.attachment_url is None
-            or attachment_http_response.mime_type is None
-        ):
-            raise AttachmentUploadError("Failed to upload attachment")
-        inline_ref = generate_inline_ref() if is_inline else None
-        file_events_to_yield = self._file_events_to_yield.setdefault(message_id, [])
-
-        assert name is not None  # we check this above, but pyright can't detect it
-        file_events_to_yield.append(
-            self.file_event(
-                url=attachment_http_response.attachment_url,
-                content_type=attachment_http_response.mime_type,
-                name=name,
-                inline_ref=inline_ref,
-            )
-        )
-        return AttachmentUploadResponse(
-            attachment_url=attachment_http_response.attachment_url,
-            mime_type=attachment_http_response.mime_type,
-            inline_ref=inline_ref,
-        )
-
-    async def _make_file_attachment_request(
-        self,
-        message_id: Identifier,
-        *,
-        access_key: Optional[str] = None,
-        download_url: Optional[str] = None,
-        download_filename: Optional[str] = None,
-        file_data: Optional[Union[bytes, BinaryIO]] = None,
-        filename: Optional[str] = None,
-        content_type: Optional[str] = None,
-        is_inline: bool = False,
-        base_url: str = POE_API_WEBSERVER_BASE_URL,
-    ) -> AttachmentHttpResponse:
         if self.access_key:
             if access_key:
                 warnings.warn(
@@ -467,57 +411,39 @@ class PoeBot:
                     + " provided with an access_key when make_app is called."
                 )
             attachment_access_key = access_key
-        url = f"{base_url}file_upload_3RD_PARTY_POST"
 
-        async with httpx.AsyncClient(timeout=120) as client:
-            try:
-                headers = {"Authorization": f"{attachment_access_key}"}
-                if download_url:
-                    if file_data or filename:
-                        raise InvalidParameterError(
-                            "Cannot provide filename or file_data if download_url is provided."
-                        )
-                    data = {
-                        "message_id": message_id,
-                        "is_inline": is_inline,
-                        "download_url": download_url,
-                    }
-                    if download_filename:
-                        data["download_filename"] = download_filename
-                    request = httpx.Request("POST", url, data=data, headers=headers)
-                elif file_data and filename:
-                    data = {"message_id": message_id, "is_inline": is_inline}
-                    files = {
-                        "file": (
-                            (filename, file_data)
-                            if content_type is None
-                            else (filename, file_data, content_type)
-                        )
-                    }
-                    request = httpx.Request(
-                        "POST", url, files=files, data=data, headers=headers
-                    )
-                else:
-                    raise InvalidParameterError(
-                        "Must provide either download_url or file_data and filename."
-                    )
-                response = await client.send(request)
+        if content_type is not None:
+            warnings.warn(
+                "content_type parameter is deprecated, and will be removed in a future release.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
 
-                if response.status_code != 200:
-                    error_pieces = [piece async for piece in response.aiter_text()]
-                    raise AttachmentUploadError(
-                        f"{response.status_code} {response.reason_phrase}: {''.join(error_pieces)}"
-                    )
+        attachment = await upload_file(
+            file=file_data,
+            file_url=download_url,
+            file_name=filename or download_filename,
+            api_key=attachment_access_key,
+            base_url=base_url,
+        )
 
-                response_data = response.json()
-                return AttachmentHttpResponse(
-                    mime_type=response_data.get("mime_type"),
-                    attachment_url=response_data.get("attachment_url"),
-                )
+        inline_ref = generate_inline_ref() if is_inline else None
+        file_events_to_yield = self._file_events_to_yield.setdefault(message_id, [])
 
-            except httpx.HTTPError:
-                logger.error("An HTTP error occurred when attempting to attach file")
-                raise
+        assert name is not None  # we check this above, but pyright can't detect it
+        file_events_to_yield.append(
+            self.file_event(
+                url=attachment.url,
+                content_type=attachment.content_type,
+                name=name,
+                inline_ref=inline_ref,
+            )
+        )
+        return AttachmentUploadResponse(
+            attachment_url=attachment.url,
+            mime_type=attachment.content_type,
+            inline_ref=inline_ref,
+        )
 
     @deprecated(
         "This method is deprecated. Use `insert_attachment_messages` instead."

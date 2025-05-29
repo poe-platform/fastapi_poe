@@ -1,5 +1,5 @@
 import json
-from collections.abc import AsyncGenerator, AsyncIterator
+from collections.abc import AsyncGenerator, AsyncIterator, Awaitable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from typing import Any, Callable, cast
 from unittest.mock import AsyncMock, Mock, patch
@@ -8,6 +8,7 @@ import httpx
 import pytest
 import pytest_asyncio
 from fastapi_poe.client import (
+    AttachmentUploadError,
     BotError,
     BotErrorNoRetry,
     _BotContext,
@@ -17,6 +18,7 @@ from fastapi_poe.client import (
     get_final_response,
     stream_request,
     sync_bot_settings,
+    upload_file,
 )
 from fastapi_poe.types import MetaResponse as MetaMessage
 from fastapi_poe.types import PartialResponse as BotMessage
@@ -657,3 +659,103 @@ def test_sync_bot_settings(mock_httpx_post: Mock) -> None:
     mock_httpx_post.side_effect = httpx.ReadTimeout("timeout")
     with pytest.raises(BotError):
         sync_bot_settings("test_bot", access_key="test_access_key")
+
+
+def _make_mock_async_client(
+    fake_send: Callable[[httpx.Request], Awaitable[httpx.Response]]
+) -> httpx.AsyncClient:
+    """
+    Builds an `httpx.AsyncClient` double whose `send` coroutine is supplied
+    by the caller (`fake_send`).
+
+    """
+    client = AsyncMock(spec=httpx.AsyncClient)
+
+    client.__aenter__.return_value = client
+    client.__aexit__.return_value = None
+
+    client.build_request = Mock(
+        side_effect=lambda *args, **kwargs: httpx.Request(*args, **kwargs)
+    )
+    client.send = AsyncMock(side_effect=fake_send)
+
+    return client
+
+
+@pytest.mark.asyncio
+async def test_upload_file_via_url() -> None:
+    expected_json = {
+        "attachment_url": "https://cdn.example.com/fake-id/file.txt",
+        "mime_type": "text/plain",
+    }
+
+    async def fake_send(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            status_code=200,
+            content=json.dumps(expected_json).encode(),
+            headers={"content-type": "application/json"},
+        )
+
+    mock_client = _make_mock_async_client(fake_send)
+    with patch("httpx.AsyncClient", return_value=mock_client):
+        attachment = await upload_file(
+            file_url="https://example.com/file.txt",
+            file_name="file.txt",
+            api_key="secret-key",
+        )
+
+    # Attachment object
+    assert attachment.url == expected_json["attachment_url"]
+    assert attachment.content_type == expected_json["mime_type"]
+    assert attachment.name == "file.txt"
+
+    # HTTP request
+    send_mock: AsyncMock = cast(AsyncMock, mock_client.send)  # satisfy pyright
+    req: httpx.Request = send_mock.call_args.args[0]
+    assert req.url.path.endswith("/file_upload_3RD_PARTY_POST")
+    assert req.method == "POST"
+    assert req.headers["Authorization"] == "secret-key"
+
+
+@pytest.mark.asyncio
+async def test_upload_file_raw_bytes() -> None:
+    expected_json = {
+        "attachment_url": "https://cdn.example.com/fake-id/hello.txt",
+        "mime_type": "text/plain",
+    }
+
+    async def fake_send(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            status_code=200,
+            content=json.dumps(expected_json).encode(),
+            headers={"content-type": "application/json"},
+        )
+
+    mock_client = _make_mock_async_client(fake_send)
+    with patch("httpx.AsyncClient", return_value=mock_client):
+        attachment = await upload_file(
+            file=b"hello world", file_name="hello.txt", api_key="secret-key"
+        )
+
+    # Attachment object
+    assert attachment.url == expected_json["attachment_url"]
+    assert attachment.content_type == expected_json["mime_type"]
+    assert attachment.name == "hello.txt"
+
+    # HTTP request
+    send_mock: AsyncMock = cast(AsyncMock, mock_client.send)  # satisfy pyright
+    req: httpx.Request = send_mock.call_args.args[0]
+    assert req.headers["Authorization"] == "secret-key"
+    assert req.headers["Content-Type"].startswith("multipart/form-data")
+
+
+@pytest.mark.asyncio
+async def test_upload_file_error_raises() -> None:
+    async def fake_send(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(status_code=500, content=b"internal error")
+
+    with (
+        patch("httpx.AsyncClient", return_value=_make_mock_async_client(fake_send)),
+        pytest.raises(AttachmentUploadError),
+    ):
+        await upload_file(file_url="https://example.com/file.txt", api_key="secret-key")
