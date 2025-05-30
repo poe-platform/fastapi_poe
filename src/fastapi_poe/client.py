@@ -6,6 +6,7 @@ For more details, see: https://creator.poe.com/docs/server-bots-functional-guide
 """
 
 import asyncio
+import concurrent.futures
 import contextlib
 import inspect
 import io
@@ -790,7 +791,7 @@ def sync_bot_settings(
     print(response.text)
 
 
-async def upload_file(
+async def upload_file_async(
     file: Optional[Union[bytes, BinaryIO]] = None,
     file_url: Optional[str] = None,
     file_name: Optional[str] = None,
@@ -898,3 +899,70 @@ async def upload_file(
                 await asyncio.sleep(retry_sleep_time)
 
     raise AssertionError("retries exhausted")  # unreachable, but satisfies pyright
+
+
+def upload_file(
+    file: Optional[Union[bytes, BinaryIO]] = None,
+    file_url: Optional[str] = None,
+    file_name: Optional[str] = None,
+    api_key: str = "",
+    *,
+    session: Optional[httpx.AsyncClient] = None,
+    on_error: ErrorHandler = _default_error_handler,
+    num_tries: int = 2,
+    retry_sleep_time: float = 0.5,
+    base_url: str = "https://www.quora.com/poe_api/",
+) -> Attachment:
+    """
+    Upload a file (raw bytes *or* via URL) to Poe and receive an Attachment
+    object that can be returned directly from a bot or stored for later use.
+
+    This is a synchronous wrapper around the async `upload_file_async`.
+
+    #### Parameters:
+    - `file` (`Optional[Union[bytes, BinaryIO]] = None`): The file to upload.
+    - `file_url` (`Optional[str] = None`): The URL of the file to upload.
+    - `file_name` (`Optional[str] = None`): The name of the file to upload. Required if
+    `file` is provided as raw bytes.
+    - `api_key` (`str = ""`): Your Poe API key, available at poe.com/api_key. This can
+    also be the `access_key` if called from a Poe server bot.
+
+    #### Returns:
+    - `Attachment`: An Attachment object representing the uploaded file.
+
+
+    """
+    coro = upload_file_async(
+        file=file,
+        file_url=file_url,
+        file_name=file_name,
+        api_key=api_key,
+        session=session,
+        on_error=on_error,
+        num_tries=num_tries,
+        retry_sleep_time=retry_sleep_time,
+        base_url=base_url,
+    )
+
+    # Case where we are not inside an event loop
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+
+    # Case where we are inside an event loop
+    # We need to create a thread that has its own event loop
+    if session is not None:
+        raise ValueError(
+            "upload_file_sync was called from an async environment *and* "
+            "`session` was supplied.  The session belongs to the outer "
+            "event loop and cannot be reused in the background thread.  "
+            "Call the async `upload_file` directly or omit `session`."
+        )
+
+    def _runner() -> Attachment:
+        return asyncio.run(coro)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as tp:
+        future = tp.submit(_runner)
+        return future.result()

@@ -113,6 +113,8 @@ documented_items = [
     "get_bot_response",
     "get_bot_response_sync",
     "get_final_response",
+    "upload_file",
+    "upload_file_async",
     "QueryRequest",
     "ProtocolMessage",
     "PartialResponse",
