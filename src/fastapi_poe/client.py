@@ -19,6 +19,8 @@ from typing import Any, BinaryIO, Callable, Optional, Union, cast
 import httpx
 import httpx_sse
 
+from fastapi_poe.sync_utils import run_sync
+
 from .types import (
     Attachment,
     ContentType,
@@ -898,3 +900,33 @@ async def upload_file(
                 await asyncio.sleep(retry_sleep_time)
 
     raise AssertionError("retries exhausted")  # unreachable, but satisfies pyright
+
+
+def upload_file_sync(
+    file: Optional[Union[bytes, BinaryIO]] = None,
+    file_url: Optional[str] = None,
+    file_name: Optional[str] = None,
+    api_key: str = "",
+    *,
+    session: Optional[httpx.AsyncClient] = None,
+    on_error: ErrorHandler = _default_error_handler,
+    num_tries: int = 2,
+    retry_sleep_time: float = 0.5,
+    base_url: str = "https://www.quora.com/poe_api/",
+) -> Attachment:
+    """
+    This is a synchronous wrapper around the async `upload_file`.
+
+    """
+    coro = upload_file(
+        file=file,
+        file_url=file_url,
+        file_name=file_name,
+        api_key=api_key,
+        session=session,
+        on_error=on_error,
+        num_tries=num_tries,
+        retry_sleep_time=retry_sleep_time,
+        base_url=base_url,
+    )
+    return run_sync(coro, session=session)
