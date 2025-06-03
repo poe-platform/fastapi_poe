@@ -26,7 +26,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import Message
 from typing_extensions import deprecated, overload
 
-from fastapi_poe.client import PROTOCOL_VERSION, sync_bot_settings, upload_file_async
+from fastapi_poe.client import PROTOCOL_VERSION, sync_bot_settings, upload_file
 from fastapi_poe.templates import (
     IMAGE_VISION_ATTACHMENT_TEMPLATE,
     TEXT_ATTACHMENT_TEMPLATE,
@@ -419,7 +419,7 @@ class PoeBot:
                 stacklevel=2,
             )
 
-        attachment = await upload_file_async(
+        attachment = await upload_file(
             file=file_data,
             file_url=download_url,
             file_name=filename or download_filename,

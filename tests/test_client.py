@@ -19,7 +19,6 @@ from fastapi_poe.client import (
     stream_request,
     sync_bot_settings,
     upload_file,
-    upload_file_async,
 )
 from fastapi_poe.types import MetaResponse as MetaMessage
 from fastapi_poe.types import PartialResponse as BotMessage
@@ -699,7 +698,7 @@ async def test_upload_file_via_url() -> None:
 
     mock_client = _make_mock_async_client(fake_send)
     with patch("httpx.AsyncClient", return_value=mock_client):
-        attachment = await upload_file_async(
+        attachment = await upload_file(
             file_url="https://example.com/file.txt",
             file_name="file.txt",
             api_key="secret-key",
@@ -734,7 +733,7 @@ async def test_upload_file_raw_bytes() -> None:
 
     mock_client = _make_mock_async_client(fake_send)
     with patch("httpx.AsyncClient", return_value=mock_client):
-        attachment = await upload_file_async(
+        attachment = await upload_file(
             file=b"hello world", file_name="hello.txt", api_key="secret-key"
         )
 
@@ -759,102 +758,4 @@ async def test_upload_file_error_raises() -> None:
         patch("httpx.AsyncClient", return_value=_make_mock_async_client(fake_send)),
         pytest.raises(AttachmentUploadError),
     ):
-        await upload_file_async(
-            file_url="https://example.com/file.txt", api_key="secret-key"
-        )
-
-
-# --------------------------------------------------------------------------- #
-# Test sync wrapper around upload_file_async
-# --------------------------------------------------------------------------- #
-
-
-def test_upload_file_sync_outside_event_loop() -> None:
-    """
-    No event-loop is running -> `upload_file_sync` uses `asyncio.run`  directly.
-    """
-    expected_json = {
-        "attachment_url": "https://cdn.example.com/fake-id/file.txt",
-        "mime_type": "text/plain",
-    }
-
-    async def fake_send(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(
-            200,
-            content=json.dumps(expected_json).encode(),
-            headers={"content-type": "application/json"},
-        )
-
-    mock_client = _make_mock_async_client(fake_send)
-
-    with patch("httpx.AsyncClient", return_value=mock_client):
-        attachment = upload_file(
-            file_url="https://example.com/file.txt",
-            file_name="file.txt",
-            api_key="secret-key",
-        )
-
-    # Attachment object ----------------------------------------------------- #
-    assert attachment.url == expected_json["attachment_url"]
-    assert attachment.content_type == expected_json["mime_type"]
-    assert attachment.name == "file.txt"
-
-    # Sent HTTP request ----------------------------------------------------- #
-    send_mock: AsyncMock = cast(AsyncMock, mock_client.send)
-    req: httpx.Request = send_mock.call_args.args[0]
-    assert req.url.path.endswith("/file_upload_3RD_PARTY_POST")
-    assert req.method == "POST"
-    assert req.headers["Authorization"] == "secret-key"
-
-
-@pytest.mark.asyncio
-async def test_upload_file_sync_inside_event_loop() -> None:
-    """
-    An event-loop is running. `upload_file_sync` must create a thread that
-    owns its own loop and proxy the result back.
-    """
-    expected_json = {
-        "attachment_url": "https://cdn.example.com/fake-id/hello.txt",
-        "mime_type": "text/plain",
-    }
-
-    async def fake_send(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(
-            200,
-            content=json.dumps(expected_json).encode(),
-            headers={"content-type": "application/json"},
-        )
-
-    mock_client = _make_mock_async_client(fake_send)
-
-    with patch("httpx.AsyncClient", return_value=mock_client):
-        attachment = upload_file(
-            file=b"hello world", file_name="hello.txt", api_key="secret-key"
-        )
-
-    # Attachment object ----------------------------------------------------- #
-    assert attachment.url == expected_json["attachment_url"]
-    assert attachment.content_type == expected_json["mime_type"]
-    assert attachment.name == "hello.txt"
-
-    # Sent HTTP request ----------------------------------------------------- #
-    send_mock: AsyncMock = cast(AsyncMock, mock_client.send)
-    req: httpx.Request = send_mock.call_args.args[0]
-    assert req.headers["Authorization"] == "secret-key"
-    assert req.headers["Content-Type"].startswith("multipart/form-data")
-
-
-@pytest.mark.asyncio
-async def test_upload_file_sync_inside_event_loop_with_session_raises() -> None:
-    """
-    Passing an explicit `session` while already inside an event-loop is illegal.
-    The wrapper must bail out immediately with `ValueError`.
-    """
-    bogus_session = AsyncMock(spec=httpx.AsyncClient)
-    with pytest.raises(ValueError, match="upload_file_sync was called"):
-        upload_file(
-            file_url="https://example.com/file.txt",
-            file_name="file.txt",
-            api_key="secret-key",
-            session=bogus_session,
-        )
+        await upload_file(file_url="https://example.com/file.txt", api_key="secret-key")
