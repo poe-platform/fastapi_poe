@@ -1,7 +1,8 @@
-from typing import Any, Optional, Union
+import math
+from typing import Any, Optional
 
 from fastapi import Request
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 from typing_extensions import Literal, TypeAlias
 
 Identifier: TypeAlias = str
@@ -31,24 +32,17 @@ class CostItem(BaseModel):
 
     An object representing a cost item used for authorization and charge request.
     #### Fields:
-    - `amount_usd_milli_cents` (`int`)
+    - `amount_usd_milli_cents` (`float`)
     - `description` (`str`)
 
     """
 
-    amount_usd_milli_cents: int
+    amount_usd_milli_cents: float
     description: Optional[str] = None
 
-    @field_validator("amount_usd_milli_cents", mode="before")
-    def validate_amount_is_int(cls, v: Union[int, str, float]) -> int:
-        if not isinstance(v, int):
-            raise ValueError(
-                "Invalid amount: expected an integer for amount_usd_milli_cents, "
-                f"got {type(v)}. Please provide the amount in milli-cents "
-                "(1/1000 of a cent) as a whole number. If you're working with a "
-                "decimal value, consider using math.ceil() to round up."
-            )
-        return v
+    @field_serializer("amount_usd_milli_cents")
+    def round_amount(self, value: float) -> int:
+        return math.ceil(value)
 
 
 class Attachment(BaseModel):
