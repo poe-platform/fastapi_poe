@@ -371,6 +371,32 @@ class Test_BotContext:
 
         return asynccontextmanager(mock_sse_connection)
 
+    def test_headers(self) -> None:
+        assert _BotContext(endpoint="test_endpoint", session=AsyncMock()).headers == {
+            "Accept": "application/json"
+        }
+
+        # API key added as auth header
+        assert _BotContext(
+            endpoint="test_endpoint", session=AsyncMock(), api_key="test_api_key"
+        ).headers == {
+            "Accept": "application/json",
+            "Authorization": "Bearer test_api_key",
+        }
+
+        # Custom default headers
+        bot_context = _BotContext(
+            endpoint="test_endpoint",
+            session=AsyncMock(),
+            api_key="test_api_key",
+            default_headers={"X-Test": "test"},
+        )
+        assert bot_context.headers == {
+            "X-Test": "test",
+            "Accept": "application/json",
+            "Authorization": "Bearer test_api_key",
+        }
+
     async def test_perform_query_request_basic(
         self, mock_bot_context: _BotContext, mock_request: QueryRequest
     ) -> None:
@@ -662,7 +688,7 @@ def test_sync_bot_settings(mock_httpx_post: Mock) -> None:
 
 
 def _make_mock_async_client(
-    fake_send: Callable[[httpx.Request], Awaitable[httpx.Response]]
+    fake_send: Callable[[httpx.Request], Awaitable[httpx.Response]],
 ) -> httpx.AsyncClient:
     """
     Builds an `httpx.AsyncClient` double whose `send` coroutine is supplied

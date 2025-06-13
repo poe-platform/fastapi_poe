@@ -74,10 +74,11 @@ class _BotContext:
     session: httpx.AsyncClient = field(repr=False)
     api_key: Optional[str] = field(default=None, repr=False)
     on_error: Optional[ErrorHandler] = field(default=None, repr=False)
+    default_headers: dict[str, str] = field(default_factory=dict, repr=False)
 
     @property
     def headers(self) -> dict[str, str]:
-        headers = {"Accept": "application/json"}
+        headers = {**self.default_headers, "Accept": "application/json"}
         if self.api_key is not None:
             headers["Authorization"] = f"Bearer {self.api_key}"
         return headers
