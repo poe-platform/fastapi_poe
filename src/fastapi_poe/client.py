@@ -74,13 +74,15 @@ class _BotContext:
     session: httpx.AsyncClient = field(repr=False)
     api_key: Optional[str] = field(default=None, repr=False)
     on_error: Optional[ErrorHandler] = field(default=None, repr=False)
-    default_headers: dict[str, str] = field(default_factory=dict, repr=False)
+    extra_headers: Optional[dict[str, str]] = field(default=None, repr=False)
 
     @property
     def headers(self) -> dict[str, str]:
-        headers = {**self.default_headers, "Accept": "application/json"}
+        headers = {"Accept": "application/json"}
         if self.api_key is not None:
             headers["Authorization"] = f"Bearer {self.api_key}"
+        if self.extra_headers is not None:
+            headers.update(self.extra_headers)
         return headers
 
     async def report_error(
@@ -355,7 +357,7 @@ async def stream_request(
     num_tries: int = 2,
     retry_sleep_time: float = 0.5,
     base_url: str = "https://api.poe.com/bot/",
-    extra_headers: dict[str, str] = {},
+    extra_headers: Optional[dict[str, str]] = None,
 ) -> AsyncGenerator[BotMessage, None]:
     """
 
@@ -460,7 +462,7 @@ async def _stream_request_with_tools(
     num_tries: int = 2,
     retry_sleep_time: float = 0.5,
     base_url: str = "https://api.poe.com/bot/",
-    extra_headers: dict[str, str] = {},
+    extra_headers: Optional[dict[str, str]] = None,
 ) -> AsyncGenerator[Union[BotMessage, ToolCallDefinition], None]:
     tool_call_object_dict: dict[int, dict[str, Any]] = {}
     async for message in stream_request_base(
@@ -526,7 +528,7 @@ async def stream_request_base(
     num_tries: int = 2,
     retry_sleep_time: float = 0.5,
     base_url: str = "https://api.poe.com/bot/",
-    extra_headers: dict[str, str] = {},
+    extra_headers: Optional[dict[str, str]] = None,
 ) -> AsyncGenerator[BotMessage, None]:
     if access_key != "":
         warnings.warn(
@@ -544,7 +546,7 @@ async def stream_request_base(
             api_key=api_key,
             session=session,
             on_error=on_error,
-            default_headers=extra_headers,
+            extra_headers=extra_headers,
         )
         got_response = False
         for i in range(num_tries):

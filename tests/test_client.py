@@ -273,7 +273,7 @@ class TestStreamRequest:
             session=ANY,
             api_key=ANY,
             on_error=ANY,
-            default_headers={"X-Test": "test"},
+            extra_headers={"X-Test": "test"},
         )
 
     @patch("fastapi_poe.client._BotContext.perform_query_request")
@@ -388,12 +388,12 @@ class Test_BotContext:
 
         return asynccontextmanager(mock_sse_connection)
 
-    def test_headers(self) -> None:
+    def test_headers_include_accept_header_by_default(self) -> None:
         assert _BotContext(endpoint="test_endpoint", session=AsyncMock()).headers == {
             "Accept": "application/json"
         }
 
-        # API key added as auth header
+    def test_headers_include_api_key_as_auth_header(self) -> None:
         assert _BotContext(
             endpoint="test_endpoint", session=AsyncMock(), api_key="test_api_key"
         ).headers == {
@@ -401,16 +401,28 @@ class Test_BotContext:
             "Authorization": "Bearer test_api_key",
         }
 
-        # Custom default headers
+    def test_headers_include_extra_headers(self) -> None:
         bot_context = _BotContext(
             endpoint="test_endpoint",
             session=AsyncMock(),
             api_key="test_api_key",
-            default_headers={"X-Test": "test"},
+            extra_headers={"X-Test": "test"},
         )
         assert bot_context.headers == {
-            "X-Test": "test",
             "Accept": "application/json",
+            "Authorization": "Bearer test_api_key",
+            "X-Test": "test",
+        }
+
+    def test_headers_extra_headers_override_default_headers(self) -> None:
+        bot_context = _BotContext(
+            endpoint="test_endpoint",
+            session=AsyncMock(),
+            api_key="test_api_key",
+            extra_headers={"Accept": "application/xml"},
+        )
+        assert bot_context.headers == {
+            "Accept": "application/xml",
             "Authorization": "Bearer test_api_key",
         }
 
@@ -705,7 +717,7 @@ def test_sync_bot_settings(mock_httpx_post: Mock) -> None:
 
 
 def _make_mock_async_client(
-    fake_send: Callable[[httpx.Request], Awaitable[httpx.Response]]
+    fake_send: Callable[[httpx.Request], Awaitable[httpx.Response]],
 ) -> httpx.AsyncClient:
     """
     Builds an `httpx.AsyncClient` double whose `send` coroutine is supplied
