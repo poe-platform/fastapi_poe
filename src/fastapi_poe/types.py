@@ -1,3 +1,4 @@
+import math
 from typing import Any, Optional, Union
 
 from fastapi import Request
@@ -41,6 +42,8 @@ class CostItem(BaseModel):
 
     @field_validator("amount_usd_milli_cents", mode="before")
     def validate_amount_is_int(cls, v: Union[int, str, float]) -> int:
+        if isinstance(v, float):
+            return math.ceil(v)
         if not isinstance(v, int):
             raise ValueError(
                 "Invalid amount: expected an integer for amount_usd_milli_cents, "
