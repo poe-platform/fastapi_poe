@@ -21,14 +21,12 @@ def test_extra_attrs() -> None:
 
 def test_cost_item() -> None:
     with pytest.raises(pydantic.ValidationError):
-        CostItem(amount_usd_milli_cents=1.5)  # type: ignore
-
-    with pytest.raises(pydantic.ValidationError):
         CostItem(amount_usd_milli_cents="1")  # type: ignore
-
-    with pytest.raises(pydantic.ValidationError):
-        CostItem(amount_usd_milli_cents=-2.5)  # type: ignore
 
     item = CostItem(amount_usd_milli_cents=25)
     assert item.amount_usd_milli_cents == 25
     assert item.description is None
+
+    item = CostItem(amount_usd_milli_cents=25.5, description="Test")  # type: ignore
+    assert item.amount_usd_milli_cents == 26
+    assert item.description == "Test"
