@@ -717,7 +717,7 @@ def test_sync_bot_settings(mock_httpx_post: Mock) -> None:
 
 
 def _make_mock_async_client(
-    fake_send: Callable[[httpx.Request], Awaitable[httpx.Response]],
+    fake_send: Callable[[httpx.Request], Awaitable[httpx.Response]]
 ) -> httpx.AsyncClient:
     """
     Builds an `httpx.AsyncClient` double whose `send` coroutine is supplied
