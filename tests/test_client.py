@@ -2,7 +2,7 @@ import json
 from collections.abc import AsyncGenerator, AsyncIterator, Awaitable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from typing import Any, Callable, cast
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import ANY, AsyncMock, Mock, patch
 
 import httpx
 import pytest
@@ -259,6 +259,23 @@ class TestStreamRequest:
             concatenated_text += message.text
         assert concatenated_text == "Hello, world!"
 
+    @patch("fastapi_poe.client._BotContext")
+    async def test_stream_request_with_extra_headers(
+        self, mock_bot_context: Mock, mock_request: QueryRequest
+    ) -> None:
+        async for _ in stream_request(
+            mock_request, "test_bot", extra_headers={"X-Test": "test"}
+        ):
+            pass
+
+        mock_bot_context.assert_called_once_with(
+            endpoint=ANY,
+            session=ANY,
+            api_key=ANY,
+            on_error=ANY,
+            extra_headers={"X-Test": "test"},
+        )
+
     @patch("fastapi_poe.client._BotContext.perform_query_request")
     async def test_stream_request_with_tools(
         self,
@@ -370,6 +387,44 @@ class Test_BotContext:
             yield mock_source
 
         return asynccontextmanager(mock_sse_connection)
+
+    def test_headers_include_accept_header_by_default(self) -> None:
+        assert _BotContext(endpoint="test_endpoint", session=AsyncMock()).headers == {
+            "Accept": "application/json"
+        }
+
+    def test_headers_include_api_key_as_auth_header(self) -> None:
+        assert _BotContext(
+            endpoint="test_endpoint", session=AsyncMock(), api_key="test_api_key"
+        ).headers == {
+            "Accept": "application/json",
+            "Authorization": "Bearer test_api_key",
+        }
+
+    def test_headers_include_extra_headers(self) -> None:
+        bot_context = _BotContext(
+            endpoint="test_endpoint",
+            session=AsyncMock(),
+            api_key="test_api_key",
+            extra_headers={"X-Test": "test"},
+        )
+        assert bot_context.headers == {
+            "Accept": "application/json",
+            "Authorization": "Bearer test_api_key",
+            "X-Test": "test",
+        }
+
+    def test_headers_extra_headers_override_default_headers(self) -> None:
+        bot_context = _BotContext(
+            endpoint="test_endpoint",
+            session=AsyncMock(),
+            api_key="test_api_key",
+            extra_headers={"Accept": "application/xml"},
+        )
+        assert bot_context.headers == {
+            "Accept": "application/xml",
+            "Authorization": "Bearer test_api_key",
+        }
 
     async def test_perform_query_request_basic(
         self, mock_bot_context: _BotContext, mock_request: QueryRequest
