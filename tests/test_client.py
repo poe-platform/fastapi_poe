@@ -35,7 +35,7 @@ from sse_starlette import ServerSentEvent
 @pytest.fixture
 def mock_request() -> QueryRequest:
     return QueryRequest(
-        version="1.1",
+        version="1.2",
         type="query",
         query=[ProtocolMessage(role="user", content="Hello, world!")],
         user_id="123",
@@ -693,7 +693,7 @@ def test_sync_bot_settings(mock_httpx_post: Mock) -> None:
     mock_httpx_post.return_value = Mock(status_code=200, text="{}")
     sync_bot_settings("test_bot", access_key="test_access_key", settings={"foo": "bar"})
     mock_httpx_post.assert_called_once_with(
-        "https://api.poe.com/bot/update_settings/test_bot/test_access_key/1.1",
+        "https://api.poe.com/bot/update_settings/test_bot/test_access_key/1.2",
         json={"foo": "bar"},
         headers={"Content-Type": "application/json"},
     )
@@ -701,7 +701,7 @@ def test_sync_bot_settings(mock_httpx_post: Mock) -> None:
 
     sync_bot_settings("test_bot", access_key="test_access_key")
     mock_httpx_post.assert_called_once_with(
-        "https://api.poe.com/bot/fetch_settings/test_bot/test_access_key/1.1",
+        "https://api.poe.com/bot/fetch_settings/test_bot/test_access_key/1.2",
         # TODO: pass headers?
         # headers={"Content-Type": "application/json"},
     )
