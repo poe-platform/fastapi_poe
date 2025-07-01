@@ -80,6 +80,7 @@ class ProtocolMessage(BaseModel):
     - `role` (`Literal["system", "user", "bot"]`)
     - `sender_id` (`Optional[str]`)
     - `content` (`str`)
+    - `parameters` (`dict[str, Any] = {}`)
     - `content_type` (`ContentType="text/markdown"`)
     - `timestamp` (`int = 0`)
     - `message_id` (`str = ""`)
@@ -92,6 +93,7 @@ class ProtocolMessage(BaseModel):
     role: Literal["system", "user", "bot"]
     sender_id: Optional[str] = None
     content: str
+    parameters: dict[str, Any] = {}
     content_type: ContentType = "text/markdown"
     timestamp: int = 0
     message_id: str = ""
@@ -212,12 +214,171 @@ class ReportErrorRequest(BaseRequest):
     metadata: dict[str, Any]
 
 
+Number = Union[int, float]
+
+
+class Divider(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    control: Literal["divider"] = "divider"
+
+
+class TextField(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    control: Literal["text_field"] = "text_field"
+    label: str
+    description: Optional[str] = None
+    parameter_name: str
+    default_value: Optional[str] = None
+    placeholder: Optional[str] = None
+
+
+class TextArea(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    control: Literal["text_area"] = "text_area"
+    label: str
+    description: Optional[str] = None
+    parameter_name: str
+    default_value: Optional[str] = None
+    placeholder: Optional[str] = None
+
+
+class ValueNamePair(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    value: str
+    name: str
+
+
+class DropDown(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    control: Literal["drop_down"] = "drop_down"
+    label: str
+    description: Optional[str] = None
+    parameter_name: str
+    default_value: Optional[str] = None
+    options: list[ValueNamePair]
+
+
+class ToggleSwitch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    control: Literal["toggle_switch"] = "toggle_switch"
+    label: str
+    description: Optional[str] = None
+    parameter_name: str
+    default_value: Optional[bool] = None
+
+
+class Slider(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    control: Literal["slider"] = "slider"
+    label: str
+    description: Optional[str] = None
+    parameter_name: str
+    default_value: Optional[Number] = None
+    min_value: Number
+    max_value: Number
+    step: Number
+
+
+class AspectRatioOption(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    value: Optional[str] = None
+    width: Number
+    height: Number
+
+
+class AspectRatio(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    control: Literal["aspect_ratio"] = "aspect_ratio"
+    label: str
+    description: Optional[str] = None
+    parameter_name: str
+    default_value: Optional[str] = None
+    options: list[AspectRatioOption]
+
+
+BaseControl = Union[
+    Divider, TextField, TextArea, DropDown, ToggleSwitch, Slider, AspectRatio
+]
+
+
+class LiteralValue(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    literal: Union[str, float, int, bool]
+
+
+class ParameterValue(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    parameter_name: str
+
+
+class ComparatorCondition(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    comparator: Literal["eq", "ne", "gt", "ge", "lt", "le"]
+    left: Union[LiteralValue, ParameterValue]
+    right: Union[LiteralValue, ParameterValue]
+
+
+class ConditionallyRenderControls(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    control: Literal["condition"] = "condition"
+    condition: ComparatorCondition
+    controls: list[BaseControl]
+
+
+FullControls = Union[
+    Divider,
+    TextField,
+    TextArea,
+    DropDown,
+    ToggleSwitch,
+    Slider,
+    AspectRatio,
+    ConditionallyRenderControls,
+]
+
+
+class Tab(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: Optional[str] = None
+    controls: list[FullControls]
+
+
+class Section(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: Optional[str] = None
+    controls: Optional[list[FullControls]] = None
+    tabs: Optional[list[Tab]] = None
+    collapsed_by_default: Optional[bool] = None
+
+
+class ParameterControls(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    api_version: Literal["2"] = "2"
+    sections: list[Section]
+
+
 class SettingsResponse(BaseModel):
     """
 
     An object representing your bot's response to a settings object.
     #### Fields:
-    - `response_version` (`int = 1`): Different Poe Protocol versions use different default settings
+    - `response_version` (`int = 2`): Different Poe Protocol versions use different default settings
     values. When provided, Poe will use the default values for the specified response version.
     If not provided, Poe will use the default values for response version 0.
     - `server_bot_dependencies` (`dict[str, int] = {}`): Information about other bots that your bot
@@ -236,12 +397,14 @@ class SettingsResponse(BaseModel):
     Anthropic.
      - `enable_multi_bot_chat_prompting` (`bool = True`): If enabled, Poe will combine previous bot
      messages if there is a multibot context.
+    - `parameter_controls` (`Optional[ParameterControls] = None`): Optional JSON object that defines
+    interactive parameter controls. The object must contain an api_version and sections array.
 
     """
 
     model_config = ConfigDict(extra="forbid")
 
-    response_version: Optional[int] = 1
+    response_version: Optional[int] = 2
     context_clear_window_secs: Optional[int] = None  # deprecated
     allow_user_context_clear: Optional[bool] = None  # deprecated
     custom_rate_card: Optional[str] = None  # deprecated
@@ -254,6 +417,7 @@ class SettingsResponse(BaseModel):
     enable_multi_bot_chat_prompting: Optional[bool] = None
     rate_card: Optional[str] = None
     cost_label: Optional[str] = None
+    parameter_controls: Optional[ParameterControls] = None
 
 
 class AttachmentUploadResponse(BaseModel):

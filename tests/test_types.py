@@ -7,7 +7,7 @@ class TestSettingsResponse:
 
     def test_default_response_version(self) -> None:
         response = SettingsResponse()
-        assert response.response_version == 1
+        assert response.response_version == 2
 
 
 def test_extra_attrs() -> None:
