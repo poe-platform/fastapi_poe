@@ -849,6 +849,28 @@ class PoeBot:
                     request.message_id
                 ):
                     yield pending_file_event
+
+                if isinstance(event, PartialResponse) and event.attachment:
+                    attachment = event.attachment
+                    inline_ref = attachment.inline_ref
+                    if "poecdn" not in attachment.url:
+                        # the file must be hosted on Poe for attachment
+                        if not self.access_key:
+                            raise ValueError(
+                                "access_key must be set on the bot to make file attachments"
+                            )
+                        attachment = await upload_file(
+                            file_url=attachment.url,
+                            file_name=attachment.name,
+                            api_key=self.access_key,
+                        )
+                    yield self.file_event(
+                        url=attachment.url,
+                        content_type=attachment.content_type,
+                        name=attachment.name,
+                        inline_ref=inline_ref,
+                    )
+
                 if isinstance(event, ServerSentEvent):
                     yield event
                 elif isinstance(event, ErrorResponse):
@@ -873,6 +895,7 @@ class PoeBot:
                     yield self.replace_response_event(event.text)
                 else:
                     yield self.text_event(event.text)
+
             # yield any remaining file events
             async for pending_file_event in self._yield_pending_file_events(
                 request.message_id

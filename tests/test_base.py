@@ -55,6 +55,47 @@ def basic_bot() -> PoeBot:
 
 
 @pytest.fixture
+def attachment_bot() -> PoeBot:
+    mock_bot = PoeBot(
+        path="/bot/attachment_bot", bot_name="attachment_bot", access_key="123"
+    )
+
+    async def get_response(
+        request: QueryRequest,
+    ) -> AsyncIterable[Union[PartialResponse, ServerSentEvent, DataResponse]]:
+        yield PartialResponse(text="Generating... (1s elapsed)")
+        yield PartialResponse(
+            text="Generating... (2s elapsed)", is_replace_response=True
+        )
+        yield PartialResponse(
+            text="Generating... (3s elapsed)", is_replace_response=True
+        )
+        inline_ref = "abc"
+        yield PartialResponse(
+            text=f"![image][{inline_ref}]",
+            attachment=Attachment(
+                url="https://test.com/cat.jpg",
+                name="cat.jpg",
+                content_type="image/jpeg",
+                inline_ref=inline_ref,
+            ),
+            is_replace_response=True,
+        )
+        # test a non-inline attachment
+        yield PartialResponse(
+            text="",
+            attachment=Attachment(
+                url="https://test.com/test.pdf",
+                name="test.pdf",
+                content_type="application/pdf",
+            ),
+        )
+
+    mock_bot.get_response = get_response
+    return mock_bot
+
+
+@pytest.fixture
 def error_bot() -> PoeBot:
     mock_bot = PoeBot(path="/bot/error_bot", bot_name="error_bot", access_key="123")
 
@@ -334,6 +375,135 @@ class TestPoeBot:
             == expected_protocol_messages
         )
 
+
+class TestPoeBotWithAttachments:
+
+    @pytest.mark.asyncio
+    @patch("fastapi_poe.base.upload_file")
+    async def test_handle_query_attachment_bot_basic(
+        self,
+        mock_upload_file: AsyncMock,
+        attachment_bot: PoeBot,
+        mock_request: QueryRequest,
+        mock_request_context: RequestContext,
+    ) -> None:
+        mock_upload_file.side_effect = [
+            Attachment(
+                url="https://pfst.cf2.poecdn.net/base/image/cat.jpg",
+                name="cat.jpg",
+                content_type="image/jpeg",
+            ),
+            Attachment(
+                url="https://pfst.cf2.poecdn.net/base/application/test.pdf",
+                name="test.pdf",
+                content_type="application/pdf",
+            ),
+        ]
+        expected_sse_events = [
+            ServerSentEvent(
+                event="text", data=json.dumps({"text": "Generating... (1s elapsed)"})
+            ),
+            ServerSentEvent(
+                event="replace_response",
+                data=json.dumps({"text": "Generating... (2s elapsed)"}),
+            ),
+            ServerSentEvent(
+                event="replace_response",
+                data=json.dumps({"text": "Generating... (3s elapsed)"}),
+            ),
+            ServerSentEvent(
+                event="file",
+                data=json.dumps(
+                    {
+                        "url": "https://pfst.cf2.poecdn.net/base/image/cat.jpg",
+                        "content_type": "image/jpeg",
+                        "name": "cat.jpg",
+                        "inline_ref": "abc",
+                    }
+                ),
+            ),
+            ServerSentEvent(
+                event="replace_response", data=json.dumps({"text": "![image][abc]"})
+            ),
+            ServerSentEvent(
+                event="file",
+                data=json.dumps(
+                    {
+                        "url": "https://pfst.cf2.poecdn.net/base/application/test.pdf",
+                        "content_type": "application/pdf",
+                        "name": "test.pdf",
+                        "inline_ref": None,
+                    }
+                ),
+            ),
+            ServerSentEvent(event="text", data=json.dumps({"text": ""})),
+            ServerSentEvent(event="done", data="{}"),
+        ]
+        actual_sse_events = [
+            event
+            async for event in attachment_bot.handle_query(
+                mock_request, mock_request_context
+            )
+        ]
+        assert len(actual_sse_events) == len(expected_sse_events)
+
+        for actual_event, expected_event in zip(actual_sse_events, expected_sse_events):
+            assert actual_event.event == expected_event.event
+            assert expected_event.data and actual_event.data
+            assert json.loads(actual_event.data) == json.loads(expected_event.data)
+
+    @pytest.mark.asyncio
+    @patch("fastapi_poe.base.upload_file")
+    async def test_handle_query_attachment_bot_error(
+        self,
+        mock_upload_file: AsyncMock,
+        attachment_bot: PoeBot,
+        mock_request: QueryRequest,
+        mock_request_context: RequestContext,
+    ) -> None:
+        mock_upload_file.side_effect = AttachmentUploadError(
+            "something failed with the upload"
+        )
+        expected_sse_events = [
+            ServerSentEvent(
+                event="text", data=json.dumps({"text": "Generating... (1s elapsed)"})
+            ),
+            ServerSentEvent(
+                event="replace_response",
+                data=json.dumps({"text": "Generating... (2s elapsed)"}),
+            ),
+            ServerSentEvent(
+                event="replace_response",
+                data=json.dumps({"text": "Generating... (3s elapsed)"}),
+            ),
+            ServerSentEvent(
+                event="error",
+                data=json.dumps(
+                    {
+                        "text": "The bot encountered an unexpected issue.",
+                        "raw_response": "AttachmentUploadError('something failed with the upload')",
+                        "allow_retry": False,
+                    }
+                ),
+            ),
+            ServerSentEvent(event="done", data="{}"),
+        ]
+        actual_sse_events = [
+            event
+            async for event in attachment_bot.handle_query(
+                mock_request, mock_request_context
+            )
+        ]
+        assert len(actual_sse_events) == len(expected_sse_events)
+
+        for actual_event, expected_event in zip(actual_sse_events, expected_sse_events):
+            assert actual_event.event == expected_event.event
+            assert expected_event.data and actual_event.data
+            assert json.loads(actual_event.data) == json.loads(expected_event.data)
+
+
+class TestPostMessageAttachment:
+
     @pytest.mark.asyncio
     @patch("httpx.AsyncClient.send")
     async def test_post_message_attachment_basic(
@@ -494,6 +664,9 @@ class TestPoeBot:
                 file_data=b"test",
                 filename="test.txt",
             )
+
+
+class TestCostCapture:
 
     def create_sse_mock(
         self,
