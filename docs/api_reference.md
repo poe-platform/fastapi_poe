@@ -562,10 +562,12 @@ Request parameters for a report_error request.
 
 Attachment included in a protocol message.
 #### Fields:
-- `url` (`str`)
-- `content_type` (`str`)
-- `name` (`str`)
-- `parsed_content` (`Optional[str] = None`)
+- `url` (`str`): The download URL of the attachment.
+- `content_type` (`str`): The MIME type of the attachment.
+- `name` (`str`): The name of the attachment.
+- `inline_ref` (`Optional[str] = None`): Set this to make Poe render the attachment inline.
+    You can then reference the attachment inline using ![title][inline_ref].
+- `parsed_content` (`Optional[str] = None`): The parsed content of the attachment.
 
 
 
