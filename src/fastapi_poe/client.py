@@ -213,6 +213,9 @@ class _BotContext:
                             name=await self._get_single_json_field(
                                 event.data, "file", message_id, "name"
                             ),
+                            inline_ref=await self._get_single_json_field(
+                                event.data, "file", message_id, "inline_ref"
+                            ),
                         ),
                     )
                     continue
