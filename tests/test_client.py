@@ -2,7 +2,7 @@ import json
 from collections.abc import AsyncGenerator, AsyncIterator, Awaitable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from typing import Any, Callable, cast
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import ANY, AsyncMock, Mock, patch
 
 import httpx
 import pytest
@@ -35,7 +35,7 @@ from sse_starlette import ServerSentEvent
 @pytest.fixture
 def mock_request() -> QueryRequest:
     return QueryRequest(
-        version="1.1",
+        version="1.2",
         type="query",
         query=[ProtocolMessage(role="user", content="Hello, world!")],
         user_id="123",
@@ -259,6 +259,23 @@ class TestStreamRequest:
             concatenated_text += message.text
         assert concatenated_text == "Hello, world!"
 
+    @patch("fastapi_poe.client._BotContext")
+    async def test_stream_request_with_extra_headers(
+        self, mock_bot_context: Mock, mock_request: QueryRequest
+    ) -> None:
+        async for _ in stream_request(
+            mock_request, "test_bot", extra_headers={"X-Test": "test"}
+        ):
+            pass
+
+        mock_bot_context.assert_called_once_with(
+            endpoint=ANY,
+            session=ANY,
+            api_key=ANY,
+            on_error=ANY,
+            extra_headers={"X-Test": "test"},
+        )
+
     @patch("fastapi_poe.client._BotContext.perform_query_request")
     async def test_stream_request_with_tools(
         self,
@@ -371,12 +388,12 @@ class Test_BotContext:
 
         return asynccontextmanager(mock_sse_connection)
 
-    def test_headers(self) -> None:
+    def test_headers_include_accept_header_by_default(self) -> None:
         assert _BotContext(endpoint="test_endpoint", session=AsyncMock()).headers == {
             "Accept": "application/json"
         }
 
-        # API key added as auth header
+    def test_headers_include_api_key_as_auth_header(self) -> None:
         assert _BotContext(
             endpoint="test_endpoint", session=AsyncMock(), api_key="test_api_key"
         ).headers == {
@@ -384,16 +401,28 @@ class Test_BotContext:
             "Authorization": "Bearer test_api_key",
         }
 
-        # Custom default headers
+    def test_headers_include_extra_headers(self) -> None:
         bot_context = _BotContext(
             endpoint="test_endpoint",
             session=AsyncMock(),
             api_key="test_api_key",
-            default_headers={"X-Test": "test"},
+            extra_headers={"X-Test": "test"},
         )
         assert bot_context.headers == {
-            "X-Test": "test",
             "Accept": "application/json",
+            "Authorization": "Bearer test_api_key",
+            "X-Test": "test",
+        }
+
+    def test_headers_extra_headers_override_default_headers(self) -> None:
+        bot_context = _BotContext(
+            endpoint="test_endpoint",
+            session=AsyncMock(),
+            api_key="test_api_key",
+            extra_headers={"Accept": "application/xml"},
+        )
+        assert bot_context.headers == {
+            "Accept": "application/xml",
             "Authorization": "Bearer test_api_key",
         }
 
@@ -664,7 +693,7 @@ def test_sync_bot_settings(mock_httpx_post: Mock) -> None:
     mock_httpx_post.return_value = Mock(status_code=200, text="{}")
     sync_bot_settings("test_bot", access_key="test_access_key", settings={"foo": "bar"})
     mock_httpx_post.assert_called_once_with(
-        "https://api.poe.com/bot/update_settings/test_bot/test_access_key/1.1",
+        "https://api.poe.com/bot/update_settings/test_bot/test_access_key/1.2",
         json={"foo": "bar"},
         headers={"Content-Type": "application/json"},
     )
@@ -672,7 +701,7 @@ def test_sync_bot_settings(mock_httpx_post: Mock) -> None:
 
     sync_bot_settings("test_bot", access_key="test_access_key")
     mock_httpx_post.assert_called_once_with(
-        "https://api.poe.com/bot/fetch_settings/test_bot/test_access_key/1.1",
+        "https://api.poe.com/bot/fetch_settings/test_bot/test_access_key/1.2",
         # TODO: pass headers?
         # headers={"Content-Type": "application/json"},
     )

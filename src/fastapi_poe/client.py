@@ -35,7 +35,7 @@ from .types import (
 from .types import MetaResponse as MetaMessage
 from .types import PartialResponse as BotMessage
 
-PROTOCOL_VERSION = "1.1"
+PROTOCOL_VERSION = "1.2"
 MESSAGE_LENGTH_LIMIT = 10_000
 
 IDENTIFIER_LENGTH = 32
@@ -74,13 +74,15 @@ class _BotContext:
     session: httpx.AsyncClient = field(repr=False)
     api_key: Optional[str] = field(default=None, repr=False)
     on_error: Optional[ErrorHandler] = field(default=None, repr=False)
-    default_headers: dict[str, str] = field(default_factory=dict, repr=False)
+    extra_headers: Optional[dict[str, str]] = field(default=None, repr=False)
 
     @property
     def headers(self) -> dict[str, str]:
         headers = {**self.default_headers, "Accept": "application/json"}
         if self.api_key is not None:
             headers["Authorization"] = f"Bearer {self.api_key}"
+        if self.extra_headers is not None:
+            headers.update(self.extra_headers)
         return headers
 
     async def report_error(
@@ -210,6 +212,9 @@ class _BotContext:
                             ),
                             name=await self._get_single_json_field(
                                 event.data, "file", message_id, "name"
+                            ),
+                            inline_ref=await self._get_single_json_field(
+                                event.data, "file", message_id, "inline_ref"
                             ),
                         ),
                     )
@@ -355,6 +360,7 @@ async def stream_request(
     num_tries: int = 2,
     retry_sleep_time: float = 0.5,
     base_url: str = "https://api.poe.com/bot/",
+    extra_headers: Optional[dict[str, str]] = None,
 ) -> AsyncGenerator[BotMessage, None]:
     """
 
@@ -392,6 +398,7 @@ async def stream_request(
             num_tries=num_tries,
             retry_sleep_time=retry_sleep_time,
             base_url=base_url,
+            extra_headers=extra_headers,
         ):
             if isinstance(message, ToolCallDefinition):
                 tool_calls.append(message)
@@ -413,6 +420,7 @@ async def stream_request(
             num_tries=num_tries,
             retry_sleep_time=retry_sleep_time,
             base_url=base_url,
+            extra_headers=extra_headers,
         ):
             yield message
 
@@ -457,6 +465,7 @@ async def _stream_request_with_tools(
     num_tries: int = 2,
     retry_sleep_time: float = 0.5,
     base_url: str = "https://api.poe.com/bot/",
+    extra_headers: Optional[dict[str, str]] = None,
 ) -> AsyncGenerator[Union[BotMessage, ToolCallDefinition], None]:
     tool_call_object_dict: dict[int, dict[str, Any]] = {}
     async for message in stream_request_base(
@@ -471,6 +480,7 @@ async def _stream_request_with_tools(
         num_tries=num_tries,
         retry_sleep_time=retry_sleep_time,
         base_url=base_url,
+        extra_headers=extra_headers,
     ):
         # OpenAI might return empty choices when its sending the final usage chunk
         if (
@@ -521,6 +531,7 @@ async def stream_request_base(
     num_tries: int = 2,
     retry_sleep_time: float = 0.5,
     base_url: str = "https://api.poe.com/bot/",
+    extra_headers: Optional[dict[str, str]] = None,
 ) -> AsyncGenerator[BotMessage, None]:
     if access_key != "":
         warnings.warn(
@@ -534,7 +545,11 @@ async def stream_request_base(
             session = await stack.enter_async_context(httpx.AsyncClient(timeout=600))
         url = f"{base_url}{bot_name}"
         ctx = _BotContext(
-            endpoint=url, api_key=api_key, session=session, on_error=on_error
+            endpoint=url,
+            api_key=api_key,
+            session=session,
+            on_error=on_error,
+            extra_headers=extra_headers,
         )
         got_response = False
         for i in range(num_tries):

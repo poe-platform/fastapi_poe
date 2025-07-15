@@ -396,6 +396,7 @@ A message as used in the Poe protocol.
 - `role` (`Literal["system", "user", "bot"]`)
 - `sender_id` (`Optional[str]`)
 - `content` (`str`)
+- `parameters` (`dict[str, Any] = {}`)
 - `content_type` (`ContentType="text/markdown"`)
 - `timestamp` (`int = 0`)
 - `message_id` (`str = ""`)
@@ -494,7 +495,7 @@ might get updated in the future.
 
 An object representing your bot's response to a settings object.
 #### Fields:
-- `response_version` (`int = 1`): Different Poe Protocol versions use different default settings
+- `response_version` (`int = 2`): Different Poe Protocol versions use different default settings
 values. When provided, Poe will use the default values for the specified response version.
 If not provided, Poe will use the default values for response version 0.
 - `server_bot_dependencies` (`dict[str, int] = {}`): Information about other bots that your bot
@@ -513,6 +514,8 @@ so that they follow role alternation, which is a requirement for certain LLM pro
 Anthropic.
  - `enable_multi_bot_chat_prompting` (`bool = True`): If enabled, Poe will combine previous bot
  messages if there is a multibot context.
+- `parameter_controls` (`Optional[ParameterControls] = None`): Optional JSON object that defines
+interactive parameter controls. The object must contain an api_version and sections array.
 
 
 
@@ -559,10 +562,12 @@ Request parameters for a report_error request.
 
 Attachment included in a protocol message.
 #### Fields:
-- `url` (`str`)
-- `content_type` (`str`)
-- `name` (`str`)
-- `parsed_content` (`Optional[str] = None`)
+- `url` (`str`): The download URL of the attachment.
+- `content_type` (`str`): The MIME type of the attachment.
+- `name` (`str`): The name of the attachment.
+- `inline_ref` (`Optional[str] = None`): Set this to make Poe render the attachment inline.
+    You can then reference the attachment inline using ![title][inline_ref].
+- `parsed_content` (`Optional[str] = None`): The parsed content of the attachment.
 
 
 
