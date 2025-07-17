@@ -425,17 +425,20 @@ class ToolCallDefinition(BaseModel):
 class ToolCallDefinitionDelta(BaseModel):
     """
 
-    An object representing a tool call chunk. This is returned as a streamed response by the model when using
-    OpenAI function calling. This may be an incomplete tool call definition (e.g. with the function name
-    set with the arguments not yet filled in), so the index can be used to identify which tool call
-    this chunk belongs to. Chunks may have null id, type, and function.name values.
+    An object representing a tool call chunk. This is returned as a streamed response by the model
+    when using OpenAI function calling. This may be an incomplete tool call definition (e.g. with
+    the function name set with the arguments not yet filled in), so the index can be used to
+    identify which tool call this chunk belongs to. Chunks may have null id, type, and
+    function.name values.
     See https://platform.openai.com/docs/guides/function-calling#streaming for examples.
     #### Fields:
-    - `index` (`int`): used to identify which tool call this chunk belongs to
-    - `id` (`Optional[str] = None`): The tool call ID. This helps the model identify previous tool call
-    suggestions and help optimize tool call loops.
-    - `type` (`Optional[str] = None`): The type of the tool call (always function for function calls)
-    - `function` (`FunctionDefinitionDelta`): The function name (string) and arguments (JSON string).
+    - `index` (`int`): used to identify to which tool call this chunk belongs.
+    - `id` (`Optional[str] = None`): The tool call ID. This helps the model identify previous tool
+    call suggestions and help optimize tool call loops.
+    - `type` (`Optional[str] = None`): The type of the tool call (always function for function
+    calls).
+    - `function` (`FunctionDefinitionDelta`): The function name (string) and arguments (JSON
+    string).
 
     """
 
