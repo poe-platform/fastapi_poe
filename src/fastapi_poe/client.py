@@ -29,6 +29,7 @@ from .types import (
     QueryRequest,
     SettingsResponse,
     ToolCallDefinition,
+    ToolCallDefinitionDelta,
     ToolDefinition,
     ToolResultDefinition,
 )
@@ -381,7 +382,7 @@ async def stream_request(
     to the ToolDefinitions. This is used for OpenAI function calling. When this is set, the LLM-suggested
     tools will automatically run once, before passing the results back to the LLM for a final response.
 
-    """    
+    """
     if tools is not None:
         async for message in _stream_request_with_tools(
             request=request,
@@ -399,7 +400,7 @@ async def stream_request(
             extra_headers=extra_headers,
         ):
             yield message
-    
+
     else:
         async for message in stream_request_base(
             request=request,
@@ -477,38 +478,65 @@ async def _stream_request_with_tools(
     ):
         # OpenAI might return empty choices when its sending the final usage chunk
         if (
-            message.data is not None
-            and "choices" in message.data
-            and message.data["choices"]
+            message.data is None
+            or "choices" not in message.data
+            or not message.data["choices"]
         ):
-            finish_reason = message.data["choices"][0]["finish_reason"]
-            if finish_reason is None:
-                if "tool_calls" in message.data["choices"][0]["delta"]:
-                    tool_calls: list[ToolCallDefinition] = [
-                        ToolCallDefinition(**tool_call_object)
-                        for tool_call_object in message.data["choices"][0]["delta"]["tool_calls"]
-                    ]
-                    # If tool_executables is not set, return the tool calls without executing them,
-                    # allowing the caller to manage the tool call loop.
-                    if tool_executables is None:
-                        yield BotMessage(text="", tool_calls=tool_calls)
-                    else:
-                        for tool_call in tool_calls:
-                            if tool_call.index not in aggregated_tool_calls:
-                                aggregated_tool_calls[tool_call.index] = tool_call
-                            else:
-                                aggregated_tool_calls[tool_call.index].function.arguments += tool_call.function.arguments
-                # if no tool calls are selected, the deltas contain content instead of tool_calls
-                elif "content" in message.data["choices"][0]["delta"]:
-                    yield BotMessage(
-                        text=message.data["choices"][0]["delta"]["content"]
-                    )
+            continue
 
-    # If tool_executables is not set, we are done since we do not need to execute any functions.
+        # If there is a finish reason, skip the chunk. This should be the same as breaking out of the loop
+        # for most models, but we continue to cover situations where other kinds of chunks might stream in
+        # after the finish chunk.
+        finish_reason = message.data["choices"][0]["finish_reason"]
+        if finish_reason is not None:
+            continue
+
+        if "tool_calls" in message.data["choices"][0]["delta"]:
+            tool_call_deltas: list[ToolCallDefinitionDelta] = [
+                ToolCallDefinitionDelta(**tool_call_object)
+                for tool_call_object in message.data["choices"][0]["delta"][
+                    "tool_calls"
+                ]
+            ]
+            # If tool_executables is not set, return the tool calls without executing them,
+            # allowing the caller to manage the tool call loop.
+            if tool_executables is None:
+                yield BotMessage(text="", tool_calls=tool_call_deltas)
+                continue
+
+            for tool_call_delta in tool_call_deltas:
+                if tool_call_delta.index not in aggregated_tool_calls:
+                    # The first chunk of a given index must contain id, type, and function.name.
+                    # If this first chunk is missing, the tool call for that index cannot be aggregated.
+                    if (
+                        tool_call_delta.id is None
+                        or tool_call_delta.type is None
+                        or tool_call_delta.function.name is None
+                    ):
+                        continue
+
+                    aggregated_tool_calls[tool_call_delta.index] = ToolCallDefinition(
+                        id=tool_call_delta.id,
+                        type=tool_call_delta.type,
+                        function=ToolCallDefinition.FunctionDefinition(
+                            name=tool_call_delta.function.name,
+                            arguments=tool_call_delta.function.arguments,
+                        ),
+                    )
+                else:
+                    aggregated_tool_calls[
+                        tool_call_delta.index
+                    ].function.arguments += tool_call_delta.function.arguments
+
+        # if no tool calls are selected, the deltas contain content instead of tool_calls
+        elif "content" in message.data["choices"][0]["delta"]:
+            yield BotMessage(text=message.data["choices"][0]["delta"]["content"])
+
+    # If tool_executables is not set, exit early since there are no functions to execute.
     if not tool_executables:
         return
 
-    tool_calls = list(aggregated_tool_calls.values())
+    tool_calls: list[ToolCallDefinition] = list(aggregated_tool_calls.values())
     tool_results = await _get_tool_results(tool_executables, tool_calls)
 
     # If we have tool calls and tool results, we still need to get the final response from the LLM

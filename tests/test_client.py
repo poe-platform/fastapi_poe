@@ -183,36 +183,16 @@ class TestStreamRequest:
                     }
                 ]
             },
-            {
-                "tool_calls": [
-                    {
-                        "index": 0, 
-                        "id": None, 
-                        "type": None, 
-                        "function": {"name": None, "arguments": '{"'}
-                    }
-                ]
-            },
+            {"tool_calls": [{"index": 0, "function": {"arguments": '{"'}}]},
             {
                 "tool_calls": [
                     {
                         "index": 0,
-                        "id": None, 
-                        "type": None, 
-                        "function": {"name": None, "arguments": 'location":"San Francisco, CA'},
+                        "function": {"arguments": 'location":"San Francisco, CA'},
                     }
                 ]
             },
-            {
-                "tool_calls": [
-                    {
-                        "index": 0, 
-                        "id": None, 
-                        "type": None, 
-                        "function": {"name": None, "arguments": '"}'}
-                    }
-                ]
-            },
+            {"tool_calls": [{"index": 0, "function": {"arguments": '"}'}}]},
             {
                 "tool_calls": [
                     {
@@ -223,36 +203,13 @@ class TestStreamRequest:
                     }
                 ]
             },
+            {"tool_calls": [{"index": 1, "function": {"arguments": '{"'}}]},
             {
                 "tool_calls": [
-                    {
-                        "index": 1, 
-                        "id": None, 
-                        "type": None, 
-                        "function": {"name": None, "arguments": '{"'}
-                    }
+                    {"index": 1, "function": {"arguments": 'location":"Tokyo, JP'}}
                 ]
             },
-            {
-                "tool_calls": [
-                    {
-                        "index": 1, 
-                        "id": None, 
-                        "type": None, 
-                        "function": {"name": None, "arguments": 'location":"Tokyo, JP'}
-                    }
-                ]
-            },
-            {
-                "tool_calls": [
-                    {
-                        "index": 1, 
-                        "id": None, 
-                        "type": None, 
-                        "function": {"name": None, "arguments": '"}'}
-                    }
-                ]
-            },
+            {"tool_calls": [{"index": 1, "function": {"arguments": '"}'}}]},
             {},
         ]
         mock_responses = [
@@ -335,20 +292,27 @@ class TestStreamRequest:
         ]
         tools, _ = tool_definitions_and_executables
 
-        tool_calls: dict[int, ToolCallDefinition] = {}
-        async for message in stream_request(
-            mock_request, "test_bot", tools=tools
-        ):
+        aggregated_tool_calls: dict[int, ToolCallDefinition] = {}
+        async for message in stream_request(mock_request, "test_bot", tools=tools):
             if message.tool_calls:
                 for tool_call in message.tool_calls:
                     # Use the index to aggregate the tool call chunks
-                    if tool_call.index not in tool_calls:
-                        tool_calls[tool_call.index] = tool_call
-                    tool_calls[tool_call.index].function.arguments += tool_call.function.arguments
+                    if tool_call.index not in aggregated_tool_calls:
+                        aggregated_tool_calls[tool_call.index] = ToolCallDefinition(
+                            id=tool_call.id or "",
+                            type=tool_call.type or "",
+                            function=ToolCallDefinition.FunctionDefinition(
+                                name=tool_call.function.name or "",
+                                arguments=tool_call.function.arguments,
+                            ),
+                        )
+                    else:
+                        aggregated_tool_calls[
+                            tool_call.index
+                        ].function.arguments += tool_call.function.arguments
 
         expected_tool_calls = [
             ToolCallDefinition(
-                index=0,
                 id="call_123",
                 type="function",
                 function=ToolCallDefinition.FunctionDefinition(
@@ -357,7 +321,6 @@ class TestStreamRequest:
                 ),
             ),
             ToolCallDefinition(
-                index=1,
                 id="call_456",
                 type="function",
                 function=ToolCallDefinition.FunctionDefinition(
@@ -365,7 +328,7 @@ class TestStreamRequest:
                 ),
             ),
         ]
-        assert list(tool_calls.values()) == expected_tool_calls
+        assert list(aggregated_tool_calls.values()) == expected_tool_calls
 
     @patch("fastapi_poe.client._BotContext.perform_query_request")
     async def test_stream_request_with_tools_when_no_tools_selected(
@@ -380,9 +343,7 @@ class TestStreamRequest:
         ]
         concatenated_text = ""
         tools, _ = tool_definitions_and_executables
-        async for message in stream_request(
-            mock_request, "test_bot", tools=tools
-        ):
+        async for message in stream_request(mock_request, "test_bot", tools=tools):
             concatenated_text += message.text
         assert concatenated_text == "there were no tool calls!"
         # we should not make a second request if no tools are selected
@@ -410,7 +371,6 @@ class TestStreamRequest:
 
         expected_tool_calls = [
             ToolCallDefinition(
-                index=0,
                 id="call_123",
                 type="function",
                 function=ToolCallDefinition.FunctionDefinition(
@@ -419,7 +379,6 @@ class TestStreamRequest:
                 ),
             ),
             ToolCallDefinition(
-                index=1,
                 id="call_456",
                 type="function",
                 function=ToolCallDefinition.FunctionDefinition(
