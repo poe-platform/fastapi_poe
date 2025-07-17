@@ -1,5 +1,5 @@
 import math
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, TypedDict
 
 from fastapi import Request
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -376,6 +376,78 @@ class ParameterControls(BaseModel):
     sections: list[Section]
 
 
+class ToolDefinition(BaseModel):
+    """
+
+    An object representing a tool definition used for OpenAI function calling.
+    #### Fields:
+    - `type` (`str`)
+    - `function` (`FunctionDefinition`): Look at the source code for a detailed description
+    of what this means.
+
+    """
+
+    class FunctionDefinition(BaseModel):
+        class ParametersDefinition(BaseModel):
+            type: str
+            properties: dict[str, object]
+            required: Optional[list[str]] = None
+
+        name: str
+        description: str
+        parameters: ParametersDefinition
+
+    type: str
+    function: FunctionDefinition
+
+
+class ToolCallDefinition(BaseModel):
+    """
+
+    An object representing a tool call. This is returned as a response by the model when using
+    OpenAI function calling. This may be only a chunk of the tool call (e.g. with the function name
+    set with the arguments not yet filled in), so the index can be used to identify which tool call
+    this chunk belongs to. Chunks may have null id, type, and function.name values.
+    See https://platform.openai.com/docs/guides/function-calling#streaming for examples.
+    #### Fields:
+    - `index` (`int`): used to identify which tool call this chunk belongs to
+    - `id` (`Optional[str] = None`): The tool call ID. This helps the model identify previous tool call
+    suggestions and help optimize tool call loops.
+    - `type` (`Optional[str] = None`): The type of the tool call (always function for function calls)
+    - `function` (`FunctionDefinition`): Look at the source code for a detailed description
+    of what this means.
+
+    """
+
+    class FunctionDefinition(BaseModel):
+        name: Optional[str] = None
+        arguments: str
+
+    index: int = 0
+    id: Optional[str] = None
+    type: Optional[str] = None
+    function: FunctionDefinition
+
+
+class ToolResultDefinition(BaseModel):
+    """
+
+    An object representing a function result. This is passed to the model in the last step
+    when using OpenAI function calling.
+    #### Fields:
+    - `role` (`str`)
+    - `name` (`str`)
+    - `tool_call_id` (`str`)
+    - `content` (`str`)
+
+    """
+
+    role: str
+    name: str
+    tool_call_id: str
+    content: str
+
+
 class SettingsResponse(BaseModel):
     """
 
@@ -515,6 +587,9 @@ class PartialResponse(BaseModel):
     attachment: Optional[Attachment] = None
     """If the bot returns an attachment, it will be contained here."""
 
+    tool_calls: list[ToolCallDefinition] = Field(default_factory=list)
+    """If the bot returns tool calls, it will be contained here."""
+
 
 class ErrorResponse(PartialResponse):
     """
@@ -550,69 +625,3 @@ class MetaResponse(PartialResponse):
     suggested_replies: bool = True
     content_type: ContentType = "text/markdown"
     refetch_settings: bool = False
-
-
-class ToolDefinition(BaseModel):
-    """
-
-    An object representing a tool definition used for OpenAI function calling.
-    #### Fields:
-    - `type` (`str`)
-    - `function` (`FunctionDefinition`): Look at the source code for a detailed description
-    of what this means.
-
-    """
-
-    class FunctionDefinition(BaseModel):
-        class ParametersDefinition(BaseModel):
-            type: str
-            properties: dict[str, object]
-            required: Optional[list[str]] = None
-
-        name: str
-        description: str
-        parameters: ParametersDefinition
-
-    type: str
-    function: FunctionDefinition
-
-
-class ToolCallDefinition(BaseModel):
-    """
-
-    An object representing a tool call. This is returned as a response by the model when using
-    OpenAI function calling.
-    #### Fields:
-    - `id` (`str`)
-    - `type` (`str`)
-    - `function` (`FunctionDefinition`): Look at the source code for a detailed description
-    of what this means.
-
-    """
-
-    class FunctionDefinition(BaseModel):
-        name: str
-        arguments: str
-
-    id: str
-    type: str
-    function: FunctionDefinition
-
-
-class ToolResultDefinition(BaseModel):
-    """
-
-    An object representing a function result. This is passed to the model in the last step
-    when using OpenAI function calling.
-    #### Fields:
-    - `role` (`str`)
-    - `name` (`str`)
-    - `tool_call_id` (`str`)
-    - `content` (`str`)
-
-    """
-
-    role: str
-    name: str
-    tool_call_id: str
-    content: str
