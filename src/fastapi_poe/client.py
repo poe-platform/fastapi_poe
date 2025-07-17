@@ -379,8 +379,9 @@ async def stream_request(
     - tools: (`Optional[list[ToolDefinition]] = None`): A list of ToolDefinition objects describing
     the functions you have. This is used for OpenAI function calling.
     - tool_executables: (`Optional[list[Callable]] = None`): A list of functions corresponding
-    to the ToolDefinitions. This is used for OpenAI function calling. When this is set, the LLM-suggested
-    tools will automatically run once, before passing the results back to the LLM for a final response.
+    to the ToolDefinitions. This is used for OpenAI function calling. When this is set, the
+    LLM-suggested tools will automatically run once, before passing the results back to the LLM for
+    a final response.
 
     """
     if tools is not None:
