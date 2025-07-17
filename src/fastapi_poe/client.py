@@ -379,8 +379,8 @@ async def stream_request(
     - tools: (`Optional[list[ToolDefinition]] = None`): A list of ToolDefinition objects describing
     the functions you have. This is used for OpenAI function calling.
     - tool_executables: (`Optional[list[Callable]] = None`): A list of functions corresponding
-    to the ToolDefinitions. This is used for OpenAI function calling. When this is set, the
-    LLM-suggested tools will automatically run once, before passing the results back to the LLM for
+    to the ToolDefinitions. This is used for OpenAI function calling. When this is set, the 
+    LLM-suggested tools will automatically run once, before passing the results back to the LLM for 
     a final response.
 
     """
@@ -485,9 +485,9 @@ async def _stream_request_with_tools(
         ):
             continue
 
-        # If there is a finish reason, skip the chunk. This should be the same as breaking out of the loop
-        # for most models, but we continue to cover situations where other kinds of chunks might stream in
-        # after the finish chunk.
+        # If there is a finish reason, skip the chunk. This should be the same as breaking out of 
+        # the loop for most models, but we continue to cover situations where other kinds of 
+        # chunks might stream in after the finish chunk.
         finish_reason = message.data["choices"][0]["finish_reason"]
         if finish_reason is not None:
             continue
@@ -508,7 +508,8 @@ async def _stream_request_with_tools(
             for tool_call_delta in tool_call_deltas:
                 if tool_call_delta.index not in aggregated_tool_calls:
                     # The first chunk of a given index must contain id, type, and function.name.
-                    # If this first chunk is missing, the tool call for that index cannot be aggregated.
+                    # If this first chunk is missing, the tool call for that index cannot be 
+                    # aggregated.
                     if (
                         tool_call_delta.id is None
                         or tool_call_delta.type is None
@@ -540,7 +541,8 @@ async def _stream_request_with_tools(
     tool_calls: list[ToolCallDefinition] = list(aggregated_tool_calls.values())
     tool_results = await _get_tool_results(tool_executables, tool_calls)
 
-    # If we have tool calls and tool results, we still need to get the final response from the LLM
+    # If we have tool calls and tool results, we still need to get the final response from the 
+    # LLM.
     if tool_calls and tool_results:
         async for message in stream_request_base(
             request=request,
