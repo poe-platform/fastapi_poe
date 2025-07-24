@@ -225,7 +225,6 @@ class TestStreamRequest:
         for message in return_values:
             yield message
 
-
     async def mock_perform_query_request_for_tools_missing_first_delta_for_index(
         self,
     ) -> AsyncGenerator[BotMessage, None]:
@@ -277,7 +276,6 @@ class TestStreamRequest:
 
         for message in return_values:
             yield message
-
 
     async def mock_perform_query_request_with_no_tools_selected(
         self,
@@ -380,7 +378,7 @@ class TestStreamRequest:
                 function=ToolCallDefinition.FunctionDefinition(
                     name="get_current_mayor", arguments='{"location":"Tokyo, JP"}'
                 ),
-            ),
+            )
         ]
         assert list(aggregated_tool_calls.values()) == expected_tool_calls
 
@@ -438,7 +436,7 @@ class TestStreamRequest:
                 function=ToolCallDefinition.FunctionDefinition(
                     name="get_current_mayor", arguments='{"location":"Tokyo, JP"}'
                 ),
-            ),
+            )
         ]
         expected_tool_results = [
             ToolResultDefinition(
