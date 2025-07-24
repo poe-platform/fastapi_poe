@@ -378,7 +378,7 @@ class TestStreamRequest:
                 function=ToolCallDefinition.FunctionDefinition(
                     name="get_current_mayor", arguments='{"location":"Tokyo, JP"}'
                 ),
-            )
+            ),
         ]
         assert list(aggregated_tool_calls.values()) == expected_tool_calls
 
@@ -436,7 +436,7 @@ class TestStreamRequest:
                 function=ToolCallDefinition.FunctionDefinition(
                     name="get_current_mayor", arguments='{"location":"Tokyo, JP"}'
                 ),
-            )
+            ),
         ]
         expected_tool_results = [
             ToolResultDefinition(
@@ -490,7 +490,7 @@ class TestStreamRequest:
                 function=ToolCallDefinition.FunctionDefinition(
                     name="get_current_mayor", arguments='{"location":"Tokyo, JP"}'
                 ),
-            ),
+            )
         ]
         expected_tool_results = [
             ToolResultDefinition(
@@ -498,7 +498,7 @@ class TestStreamRequest:
                 name="get_current_mayor",
                 tool_call_id="call_456",
                 content=json.dumps(tool_executables[1]('{"location":"Tokyo, JP"}')),
-            ),
+            )
         ]
         # check that the tool calls and results are passed to the second perform_query_request
         assert {
