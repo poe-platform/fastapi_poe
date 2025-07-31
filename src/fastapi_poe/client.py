@@ -29,6 +29,7 @@ from .types import (
     QueryRequest,
     SettingsResponse,
     ToolCallDefinition,
+    ToolCallDefinitionDelta,
     ToolDefinition,
     ToolResultDefinition,
 )
@@ -78,7 +79,7 @@ class _BotContext:
 
     @property
     def headers(self) -> dict[str, str]:
-        headers = {**self.default_headers, "Accept": "application/json"}
+        headers = {"Accept": "application/json"}
         if self.api_key is not None:
             headers["Authorization"] = f"Bearer {self.api_key}"
         if self.extra_headers is not None:
@@ -375,22 +376,21 @@ async def stream_request(
     - `api_key` (`str = ""`): Your Poe API key, available at poe.com/api_key. You will need
     this in case you are trying to use this function from a script/shell. Note that if an `api_key`
     is provided, compute points will be charged on the account corresponding to the `api_key`.
-    - tools: (`Optional[list[ToolDefinition]] = None`): An list of ToolDefinition objects describing
+    - tools: (`Optional[list[ToolDefinition]] = None`): A list of ToolDefinition objects describing
     the functions you have. This is used for OpenAI function calling.
-    - tool_executables: (`Optional[list[Callable]] = None`): An list of functions corresponding
-    to the ToolDefinitions. This is used for OpenAI function calling.
+    - tool_executables: (`Optional[list[Callable]] = None`): A list of functions corresponding
+    to the ToolDefinitions. This is used for OpenAI function calling. When this is set, the
+    LLM-suggested tools will automatically run once, before passing the results back to the LLM for
+    a final response.
 
     """
-    tool_calls = None
-    tool_results = None
     if tools is not None:
-        assert tool_executables is not None
-        tool_calls = []
         async for message in _stream_request_with_tools(
             request=request,
             bot_name=bot_name,
             api_key=api_key,
             tools=tools,
+            tool_executables=tool_executables,
             access_key=access_key,
             access_key_deprecation_warning_stacklevel=access_key_deprecation_warning_stacklevel,
             session=session,
@@ -400,19 +400,13 @@ async def stream_request(
             base_url=base_url,
             extra_headers=extra_headers,
         ):
-            if isinstance(message, ToolCallDefinition):
-                tool_calls.append(message)
-            else:
-                yield message
-        tool_results = await _get_tool_results(tool_executables, tool_calls)
-    if tools is None or (tool_calls and tool_results):
+            yield message
+
+    else:
         async for message in stream_request_base(
             request=request,
             bot_name=bot_name,
             api_key=api_key,
-            tools=tools,
-            tool_calls=tool_calls,
-            tool_results=tool_results,
             access_key=access_key,
             access_key_deprecation_warning_stacklevel=access_key_deprecation_warning_stacklevel,
             session=session,
@@ -458,6 +452,7 @@ async def _stream_request_with_tools(
     api_key: str = "",
     *,
     tools: list[ToolDefinition],
+    tool_executables: Optional[list[Callable]] = None,
     access_key: str = "",
     access_key_deprecation_warning_stacklevel: int = 2,
     session: Optional[httpx.AsyncClient] = None,
@@ -466,8 +461,8 @@ async def _stream_request_with_tools(
     retry_sleep_time: float = 0.5,
     base_url: str = "https://api.poe.com/bot/",
     extra_headers: Optional[dict[str, str]] = None,
-) -> AsyncGenerator[Union[BotMessage, ToolCallDefinition], None]:
-    tool_call_object_dict: dict[int, dict[str, Any]] = {}
+) -> AsyncGenerator[BotMessage, None]:
+    aggregated_tool_calls: dict[int, ToolCallDefinition] = {}
     async for message in stream_request_base(
         request=request,
         bot_name=bot_name,
@@ -484,36 +479,88 @@ async def _stream_request_with_tools(
     ):
         # OpenAI might return empty choices when its sending the final usage chunk
         if (
-            message.data is not None
-            and "choices" in message.data
-            and message.data["choices"]
+            message.data is None
+            or "choices" not in message.data
+            or not message.data["choices"]
         ):
-            finish_reason = message.data["choices"][0]["finish_reason"]
-            if finish_reason is None:
-                if "tool_calls" in message.data["choices"][0]["delta"]:
-                    tool_call_object = message.data["choices"][0]["delta"][
-                        "tool_calls"
-                    ][0]
-                    index = tool_call_object.pop("index")
-                    if index not in tool_call_object_dict:
-                        tool_call_object_dict[index] = tool_call_object
-                    else:
-                        function_info = tool_call_object["function"]
-                        tool_call_object_dict[index]["function"][
-                            "arguments"
-                        ] += function_info["arguments"]
-                # if no tool calls are selected, the deltas contain content instead of tool_calls
-                elif "content" in message.data["choices"][0]["delta"]:
-                    yield BotMessage(
-                        text=message.data["choices"][0]["delta"]["content"]
-                    )
+            continue
 
-    tool_call_object_list = [
-        tool_call_object
-        for _, tool_call_object in sorted(tool_call_object_dict.items())
-    ]
-    for tool_call_object in tool_call_object_list:
-        yield ToolCallDefinition(**tool_call_object)
+        # If there is a finish reason, skip the chunk. This should be the same as breaking out of
+        # the loop for most models, but we continue to cover situations where other kinds of
+        # chunks might stream in after the finish chunk.
+        finish_reason = message.data["choices"][0]["finish_reason"]
+        if finish_reason is not None:
+            continue
+
+        if "tool_calls" in message.data["choices"][0]["delta"]:
+            tool_call_deltas: list[ToolCallDefinitionDelta] = [
+                ToolCallDefinitionDelta(**tool_call_object)
+                for tool_call_object in message.data["choices"][0]["delta"][
+                    "tool_calls"
+                ]
+            ]
+            # If tool_executables is not set, return the tool calls without executing them,
+            # allowing the caller to manage the tool call loop.
+            if tool_executables is None:
+                yield BotMessage(text="", tool_calls=tool_call_deltas)
+                continue
+
+            for tool_call_delta in tool_call_deltas:
+                if tool_call_delta.index not in aggregated_tool_calls:
+                    # The first chunk of a given index must contain id, type, and function.name.
+                    # If this first chunk is missing, the tool call for that index cannot be
+                    # aggregated.
+                    if (
+                        tool_call_delta.id is None
+                        or tool_call_delta.type is None
+                        or tool_call_delta.function.name is None
+                    ):
+                        continue
+
+                    aggregated_tool_calls[tool_call_delta.index] = ToolCallDefinition(
+                        id=tool_call_delta.id,
+                        type=tool_call_delta.type,
+                        function=ToolCallDefinition.FunctionDefinition(
+                            name=tool_call_delta.function.name,
+                            arguments=tool_call_delta.function.arguments,
+                        ),
+                    )
+                else:
+                    aggregated_tool_calls[
+                        tool_call_delta.index
+                    ].function.arguments += tool_call_delta.function.arguments
+
+        # if no tool calls are selected, the deltas contain content instead of tool_calls
+        elif "content" in message.data["choices"][0]["delta"]:
+            yield BotMessage(text=message.data["choices"][0]["delta"]["content"])
+
+    # If tool_executables is not set, exit early since there are no functions to execute.
+    if not tool_executables:
+        return
+
+    tool_calls: list[ToolCallDefinition] = list(aggregated_tool_calls.values())
+    tool_results = await _get_tool_results(tool_executables, tool_calls)
+
+    # If we have tool calls and tool results, we still need to get the final response from the
+    # LLM.
+    if tool_calls and tool_results:
+        async for message in stream_request_base(
+            request=request,
+            bot_name=bot_name,
+            api_key=api_key,
+            tools=tools,
+            tool_calls=tool_calls,
+            tool_results=tool_results,
+            access_key=access_key,
+            access_key_deprecation_warning_stacklevel=access_key_deprecation_warning_stacklevel,
+            session=session,
+            on_error=on_error,
+            num_tries=num_tries,
+            retry_sleep_time=retry_sleep_time,
+            base_url=base_url,
+            extra_headers=extra_headers,
+        ):
+            yield message
 
 
 async def stream_request_base(

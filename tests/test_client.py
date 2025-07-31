@@ -170,6 +170,8 @@ class TestStreamRequest:
     ) -> AsyncGenerator[BotMessage, None]:
         """Mock the OpenAI API response for tool calls."""
 
+        # See https://platform.openai.com/docs/guides/function-calling?api-mode=chat#streaming
+        # for details on OpenAI's streaming tool call format.
         mock_delta = [
             {
                 "tool_calls": [
@@ -181,6 +183,58 @@ class TestStreamRequest:
                     }
                 ]
             },
+            {"tool_calls": [{"index": 0, "function": {"arguments": '{"'}}]},
+            {
+                "tool_calls": [
+                    {
+                        "index": 0,
+                        "function": {"arguments": 'location":"San Francisco, CA'},
+                    }
+                ]
+            },
+            {"tool_calls": [{"index": 0, "function": {"arguments": '"}'}}]},
+            {
+                "tool_calls": [
+                    {
+                        "index": 1,
+                        "id": "call_456",
+                        "type": "function",
+                        "function": {"name": "get_current_mayor", "arguments": ""},
+                    }
+                ]
+            },
+            {"tool_calls": [{"index": 1, "function": {"arguments": '{"'}}]},
+            {
+                "tool_calls": [
+                    {"index": 1, "function": {"arguments": 'location":"Tokyo, JP'}}
+                ]
+            },
+            {"tool_calls": [{"index": 1, "function": {"arguments": '"}'}}]},
+            {},
+        ]
+        mock_responses = [
+            self._create_mock_openai_response(delta) for delta in mock_delta
+        ]
+        # last chunk has finish reason "tool_calls"
+        mock_responses[-1]["choices"][0]["finish_reason"] = "tool_calls"
+
+        return_values = [
+            BotMessage(text="", data=response) for response in mock_responses
+        ]
+
+        for message in return_values:
+            yield message
+
+    async def mock_perform_query_request_for_tools_missing_first_delta_for_index(
+        self,
+    ) -> AsyncGenerator[BotMessage, None]:
+        """Mock the OpenAI API response for tool calls."""
+
+        # See https://platform.openai.com/docs/guides/function-calling?api-mode=chat#streaming
+        # for details on OpenAI's streaming tool call format.
+        mock_delta = [
+            # Missing the first delta for index 0, where the tool call id, type, and function name
+            # are expected.
             {"tool_calls": [{"index": 0, "function": {"arguments": '{"'}}]},
             {
                 "tool_calls": [
@@ -288,6 +342,77 @@ class TestStreamRequest:
             self.mock_perform_query_request_for_tools(),
             mock_text_only_query_response,
         ]
+        tools, _ = tool_definitions_and_executables
+
+        aggregated_tool_calls: dict[int, ToolCallDefinition] = {}
+        async for message in stream_request(mock_request, "test_bot", tools=tools):
+            if message.tool_calls:
+                for tool_call in message.tool_calls:
+                    # Use the index to aggregate the tool call chunks
+                    if tool_call.index not in aggregated_tool_calls:
+                        aggregated_tool_calls[tool_call.index] = ToolCallDefinition(
+                            id=tool_call.id or "",
+                            type=tool_call.type or "",
+                            function=ToolCallDefinition.FunctionDefinition(
+                                name=tool_call.function.name or "",
+                                arguments=tool_call.function.arguments,
+                            ),
+                        )
+                    else:
+                        aggregated_tool_calls[
+                            tool_call.index
+                        ].function.arguments += tool_call.function.arguments
+
+        expected_tool_calls = [
+            ToolCallDefinition(
+                id="call_123",
+                type="function",
+                function=ToolCallDefinition.FunctionDefinition(
+                    name="get_current_weather",
+                    arguments='{"location":"San Francisco, CA"}',
+                ),
+            ),
+            ToolCallDefinition(
+                id="call_456",
+                type="function",
+                function=ToolCallDefinition.FunctionDefinition(
+                    name="get_current_mayor", arguments='{"location":"Tokyo, JP"}'
+                ),
+            ),
+        ]
+        assert list(aggregated_tool_calls.values()) == expected_tool_calls
+
+    @patch("fastapi_poe.client._BotContext.perform_query_request")
+    async def test_stream_request_with_tools_when_no_tools_selected(
+        self,
+        mock_perform_query_request_with_tools: Mock,
+        mock_request: QueryRequest,
+        tool_definitions_and_executables: tuple[list[ToolDefinition], list[Callable]],
+    ) -> None:
+        """Test case where the model does not select any tools to call."""
+        mock_perform_query_request_with_tools.side_effect = [
+            self.mock_perform_query_request_with_no_tools_selected()
+        ]
+        concatenated_text = ""
+        tools, _ = tool_definitions_and_executables
+        async for message in stream_request(mock_request, "test_bot", tools=tools):
+            concatenated_text += message.text
+        assert concatenated_text == "there were no tool calls!"
+        # we should not make a second request if no tools are selected
+        assert mock_perform_query_request_with_tools.call_count == 1
+
+    @patch("fastapi_poe.client._BotContext.perform_query_request")
+    async def test_stream_request_with_tools_and_tool_executables(
+        self,
+        mock_perform_query_request_with_tools: Mock,
+        mock_request: QueryRequest,
+        tool_definitions_and_executables: tuple[list[ToolDefinition], list[Callable]],
+        mock_text_only_query_response: AsyncGenerator[BotMessage, None],
+    ) -> None:
+        mock_perform_query_request_with_tools.side_effect = [
+            self.mock_perform_query_request_for_tools(),
+            mock_text_only_query_response,
+        ]
         concatenated_text = ""
         tools, tool_executables = tool_definitions_and_executables
         async for message in stream_request(
@@ -338,7 +463,53 @@ class TestStreamRequest:
         ].kwargs.items()
 
     @patch("fastapi_poe.client._BotContext.perform_query_request")
-    async def test_stream_request_with_tools_when_no_tools_selected(
+    async def test_stream_request_with_tools_and_tool_executables_missing_first_delta_for_index(
+        self,
+        mock_perform_query_request_with_tools: Mock,
+        mock_request: QueryRequest,
+        tool_definitions_and_executables: tuple[list[ToolDefinition], list[Callable]],
+        mock_text_only_query_response: AsyncGenerator[BotMessage, None],
+    ) -> None:
+        mock_perform_query_request_with_tools.side_effect = [
+            self.mock_perform_query_request_for_tools_missing_first_delta_for_index(),
+            mock_text_only_query_response,
+        ]
+        concatenated_text = ""
+        tools, tool_executables = tool_definitions_and_executables
+        async for message in stream_request(
+            mock_request, "test_bot", tools=tools, tool_executables=tool_executables
+        ):
+            concatenated_text += message.text
+        assert concatenated_text == "Hello, world!"
+
+        # The first delta for index 0 is missing, so we should only have one tool call (index 1).
+        expected_tool_calls = [
+            ToolCallDefinition(
+                id="call_456",
+                type="function",
+                function=ToolCallDefinition.FunctionDefinition(
+                    name="get_current_mayor", arguments='{"location":"Tokyo, JP"}'
+                ),
+            )
+        ]
+        expected_tool_results = [
+            ToolResultDefinition(
+                role="tool",
+                name="get_current_mayor",
+                tool_call_id="call_456",
+                content=json.dumps(tool_executables[1]('{"location":"Tokyo, JP"}')),
+            )
+        ]
+        # check that the tool calls and results are passed to the second perform_query_request
+        assert {
+            "tool_calls": expected_tool_calls,
+            "tool_results": expected_tool_results,
+        }.items() <= mock_perform_query_request_with_tools.call_args_list[
+            1
+        ].kwargs.items()
+
+    @patch("fastapi_poe.client._BotContext.perform_query_request")
+    async def test_stream_request_with_tools_and_tool_executables_when_no_tools_selected(
         self,
         mock_perform_query_request_with_tools: Mock,
         mock_request: QueryRequest,
