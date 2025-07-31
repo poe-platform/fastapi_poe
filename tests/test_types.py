@@ -40,17 +40,7 @@ def test_cost_item() -> None:
 
 
 def test_protocol_message() -> None:
-    # user message
-    message = ProtocolMessage(role="user", content="Hello, world!")
-    assert message.role == "user"
-    assert message.message_type is None
-    assert message.content == "Hello, world!"
-
-    # bot message
-    message = ProtocolMessage(role="bot", content="How can I help you?")
-    assert message.role == "bot"
-    assert message.message_type is None
-    assert message.content == "How can I help you?"
+    # some of these checks are redundant to pydantic's validation, but serve as examples.
 
     # tool calls message
     tool_calls_content = json.dumps(
@@ -101,3 +91,11 @@ def test_protocol_message() -> None:
     assert message.role == "tool"
     assert message.message_type is None
     assert message.content == tool_results_content
+
+    # invalid roles
+    # assistant is sometimes used by other LLM providers, but it is not valid for ProtocolMessage
+    with pytest.raises(pydantic.ValidationError):
+        ProtocolMessage(role="assistant", content="How can I help you?")  # type: ignore
+
+    with pytest.raises(pydantic.ValidationError):
+        ProtocolMessage(role="engineer", content="Hello, world!")  # type: ignore
