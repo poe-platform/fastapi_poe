@@ -8,6 +8,7 @@ from typing_extensions import Literal, TypeAlias
 Identifier: TypeAlias = str
 FeedbackType: TypeAlias = Literal["like", "dislike"]
 ContentType: TypeAlias = Literal["text/markdown", "text/plain"]
+MessageType: TypeAlias = Literal["function_call"]
 ErrorType: TypeAlias = Literal[
     "user_message_too_long", "insufficient_fund", "user_caused_error"
 ]
@@ -80,7 +81,8 @@ class ProtocolMessage(BaseModel):
 
     A message as used in the Poe protocol.
     #### Fields:
-    - `role` (`Literal["system", "user", "bot"]`)
+    - `role` (`Literal["system", "user", "bot", "tool"]`)
+    - `message_type` (`Optional[MessageType] = None`)
     - `sender_id` (`Optional[str]`)
     - `content` (`str`)
     - `parameters` (`dict[str, Any] = {}`)
@@ -93,7 +95,8 @@ class ProtocolMessage(BaseModel):
 
     """
 
-    role: Literal["system", "user", "bot"]
+    role: Literal["system", "user", "bot", "tool"]
+    message_type: Optional[MessageType] = None
     sender_id: Optional[str] = None
     content: str
     parameters: dict[str, Any] = {}
