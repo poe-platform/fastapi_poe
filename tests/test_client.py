@@ -310,7 +310,6 @@ class TestStreamRequest:
         yield BotMessage(text="final ")
         yield BotMessage(text="response")
 
-
     @patch("fastapi_poe.client._BotContext.perform_query_request")
     async def test_stream_request_basic(
         self,
