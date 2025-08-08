@@ -477,12 +477,12 @@ async def _stream_request_with_tools(
         base_url=base_url,
         extra_headers=extra_headers,
     ):
-        # OpenAI might return empty choices when its sending the final usage chunk
         if (
             message.data is None
             or "choices" not in message.data
             or not message.data["choices"]
         ):
+            yield message
             continue
 
         # If there is a finish reason, skip the chunk. This should be the same as breaking out of

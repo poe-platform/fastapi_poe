@@ -300,6 +300,16 @@ class TestStreamRequest:
         for message in return_values:
             yield message
 
+    async def mock_perform_query_request_with_bot_returning_regular_response(
+        self,
+    ) -> AsyncGenerator[BotMessage, None]:
+        """Mock the OpenAI API response for tool calls when the bot returns a regular response."""
+        yield BotMessage(text="here ")
+        yield BotMessage(text="is ")
+        yield BotMessage(text="the ")
+        yield BotMessage(text="final ")
+        yield BotMessage(text="response")
+
     @patch("fastapi_poe.client._BotContext.perform_query_request")
     async def test_stream_request_basic(
         self,
@@ -398,6 +408,25 @@ class TestStreamRequest:
         async for message in stream_request(mock_request, "test_bot", tools=tools):
             concatenated_text += message.text
         assert concatenated_text == "there were no tool calls!"
+        # we should not make a second request if no tools are selected
+        assert mock_perform_query_request_with_tools.call_count == 1
+
+    @patch("fastapi_poe.client._BotContext.perform_query_request")
+    async def test_stream_request_with_tools_with_bot_returning_regular_response(
+        self,
+        mock_perform_query_request_with_tools: Mock,
+        mock_request: QueryRequest,
+        tool_definitions_and_executables: tuple[list[ToolDefinition], list[Callable]],
+    ) -> None:
+        """Test case where the model does not select any tools to call."""
+        mock_perform_query_request_with_tools.side_effect = [
+            self.mock_perform_query_request_with_bot_returning_regular_response()
+        ]
+        concatenated_text = ""
+        tools, _ = tool_definitions_and_executables
+        async for message in stream_request(mock_request, "test_bot", tools=tools):
+            concatenated_text += message.text
+        assert concatenated_text == "here is the final response"
         # we should not make a second request if no tools are selected
         assert mock_perform_query_request_with_tools.call_count == 1
 
