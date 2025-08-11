@@ -450,7 +450,7 @@ Similar to `Partial Response`. Yield this to communicate `meta` events from serv
 The currently supported values are `text/plain` and `text/markdown`.
 - `refetch_settings` (`bool = False`): Used to trigger a settings fetch request from Poe. A more
 robust way to trigger this is documented at:
-https://creator.poe.com/docs/server-bots-functional-guides#updating-bot-settings
+https://creator.poe.com/docs/server-bots/updating-bot-settings
 
 
 
