@@ -1112,7 +1112,7 @@ def make_app(
                 "Bot name or access key is not set for PoeBot.\n"
                 "Bot settings will NOT be synced automatically on server start/update."
                 "Please remember to sync bot settings manually.\n\n"
-                "For more information, see: https://creator.poe.com/docs/server-bots-functional-guides#updating-bot-settings"
+                "For more information, see: https://creator.poe.com/docs/server-bots/updating-bot-settings"
             )
             logger.warning("\n************* Warning *************")
         else:
@@ -1134,7 +1134,7 @@ def make_app(
                 )
                 logger.error("Please sync bot settings manually.\n\n")
                 logger.error(
-                    "For more information, see: https://creator.poe.com/docs/server-bots-functional-guides#updating-bot-settings"
+                    "For more information, see: https://creator.poe.com/docs/server-bots/updating-bot-settings"
                 )
                 logger.error("\n*********** Error ***********")
 
