@@ -10,7 +10,10 @@ FeedbackType: TypeAlias = Literal["like", "dislike"]
 ContentType: TypeAlias = Literal["text/markdown", "text/plain"]
 MessageType: TypeAlias = Literal["function_call"]
 ErrorType: TypeAlias = Literal[
-    "user_message_too_long", "insufficient_fund", "user_caused_error"
+    "user_message_too_long",
+    "insufficient_fund",
+    "user_caused_error",
+    "privacy_authorization_error",
 ]
 
 
@@ -615,6 +618,9 @@ class PartialResponse(BaseModel):
 
     tool_calls: list[ToolCallDefinitionDelta] = Field(default_factory=list)
     """If the bot returns tool calls, it will be contained here."""
+
+    index: Optional[int] = None
+    """If a bot supports multiple responses, this is the index of the response to be updated."""
 
 
 class ErrorResponse(PartialResponse):
