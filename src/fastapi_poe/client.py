@@ -184,7 +184,7 @@ class _BotContext:
         ) as event_source:
             async for event in event_source.aiter_sse():
                 event_count += 1
-                index: Optional[int] = await self._get_single_json_field_safe(
+                index: Optional[int] = await self._get_single_json_integer_field_safe(
                     event.data, event.event, message_id, "index"
                 )
                 if event.event == "done":
@@ -331,11 +331,14 @@ class _BotContext:
             raise BotErrorNoRetry(f"Expected string in '{context}' event")
         return text
 
-    async def _get_single_json_field_safe(
-        self, data: str, context: str, message_id: Identifier, field: str = "text"
-    ) -> Optional[Any]:
+    async def _get_single_json_integer_field_safe(
+        self, data: str, context: str, message_id: Identifier, field: str
+    ) -> Optional[int]:
         data_dict = await self._load_json_dict(data, context, message_id)
         if field not in data_dict:
+            return None
+        result = data_dict[field]
+        if not isinstance(result, int):
             return None
         return data_dict[field]
 

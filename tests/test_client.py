@@ -774,6 +774,8 @@ class Test_BotContext:
             ServerSentEvent(event="text", data='{"text": "hello", "index": 0}'),
             ServerSentEvent(event="text", data='{"text": " world", "index": 0}'),
             ServerSentEvent(event="text", data='{"text": "hi.", "index": 1}'),
+            # Bad index value should be ignored
+            ServerSentEvent(event="text", data='{"text": "text with bad index", "index": "banana"}'),
             ServerSentEvent(event="done", data="{}"),
             ServerSentEvent(
                 event="text", data='{"text": "blahblah", "index": 2}'
@@ -817,6 +819,16 @@ class Test_BotContext:
                     full_prompt=repr(mock_request),
                     is_replace_response=False,
                     index=1,
+                ),
+                BotMessage(
+                    text="text with bad index",
+                    raw_response={
+                        "type": "text",
+                        "text": '{"text": "text with bad index", "index": "banana"}',
+                    },
+                    full_prompt=repr(mock_request),
+                    is_replace_response=False,
+                    index=None,
                 ),
             ]
 
