@@ -340,7 +340,7 @@ class _BotContext:
         result = data_dict[field]
         if not isinstance(result, int):
             return None
-        return data_dict[field]
+        return result
 
     async def _load_json_dict(
         self, data: str, context: str, message_id: Identifier

@@ -775,7 +775,9 @@ class Test_BotContext:
             ServerSentEvent(event="text", data='{"text": " world", "index": 0}'),
             ServerSentEvent(event="text", data='{"text": "hi.", "index": 1}'),
             # Bad index value should be ignored
-            ServerSentEvent(event="text", data='{"text": "text with bad index", "index": "banana"}'),
+            ServerSentEvent(
+                event="text", data='{"text": "text with bad index", "index": "banana"}'
+            ),
             ServerSentEvent(event="done", data="{}"),
             ServerSentEvent(
                 event="text", data='{"text": "blahblah", "index": 2}'
