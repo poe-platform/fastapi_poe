@@ -184,6 +184,9 @@ class _BotContext:
         ) as event_source:
             async for event in event_source.aiter_sse():
                 event_count += 1
+                index: Optional[int] = await self._get_single_json_field_safe(
+                    event.data, event.event, message_id, "index"
+                )
                 if event.event == "done":
                     # Don't send a report if we already told the bot about some other mistake.
                     if not chunks and not error_reported and not tools:
@@ -218,6 +221,7 @@ class _BotContext:
                                 event.data, "file", message_id, "inline_ref"
                             ),
                         ),
+                        index=index,
                     )
                     continue
                 elif event.event == "suggested_reply":
@@ -229,11 +233,15 @@ class _BotContext:
                         raw_response={"type": event.event, "text": event.data},
                         full_prompt=repr(request),
                         is_suggested_reply=True,
+                        index=index,
                     )
                     continue
                 elif event.event == "json":
                     yield BotMessage(
-                        text="", data=json.loads(event.data), full_prompt=repr(request)
+                        text="",
+                        data=json.loads(event.data),
+                        full_prompt=repr(request),
+                        index=index,
                     )
                     continue
                 elif event.event == "meta":
@@ -304,6 +312,7 @@ class _BotContext:
                     raw_response={"type": event.event, "text": event.data},
                     full_prompt=repr(request),
                     is_replace_response=(event.event == "replace_response"),
+                    index=index,
                 )
         await self.report_error(
             "Bot exited without sending 'done' event", {"message_id": message_id}
@@ -321,6 +330,14 @@ class _BotContext:
             )
             raise BotErrorNoRetry(f"Expected string in '{context}' event")
         return text
+
+    async def _get_single_json_field_safe(
+        self, data: str, context: str, message_id: Identifier, field: str = "text"
+    ) -> Optional[Any]:
+        data_dict = await self._load_json_dict(data, context, message_id)
+        if field not in data_dict:
+            return None
+        return data_dict[field]
 
     async def _load_json_dict(
         self, data: str, context: str, message_id: Identifier
