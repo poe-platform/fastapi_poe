@@ -626,10 +626,9 @@ class Test_BotContext:
             "Authorization": "Bearer test_api_key",
         }
 
-    async def test_perform_query_request_basic(
+    async def test_perform_query_request_text_events(
         self, mock_bot_context: _BotContext, mock_request: QueryRequest
     ) -> None:
-        # basic text case
         events = [
             ServerSentEvent(event="text", data='{"text": "some"}'),
             ServerSentEvent(event="text", data='{"text": " response."}'),
@@ -647,6 +646,9 @@ class Test_BotContext:
                 concatenated_text += message.text
             assert concatenated_text == "some response."
 
+    async def test_perform_query_request_non_text_events(
+        self, mock_bot_context: _BotContext, mock_request: QueryRequest
+    ) -> None:
         # other events
         events = [
             ServerSentEvent(
@@ -719,7 +721,9 @@ class Test_BotContext:
                 ),
             ]
 
-        # no done event - should still work
+    async def test_perform_query_request_no_done_event_still_succeeds(
+        self, mock_bot_context: _BotContext, mock_request: QueryRequest
+    ) -> None:
         events = [
             ServerSentEvent(event="text", data='{"text": "some"}'),
             ServerSentEvent(event="text", data='{"text": " response."}'),
@@ -733,7 +737,9 @@ class Test_BotContext:
                 concatenated_text += message.text
             assert concatenated_text == "some response."
 
-        # error with allow_retry=false
+    async def test_perform_query_request_error_with_allow_retry_false(
+        self, mock_bot_context: _BotContext, mock_request: QueryRequest
+    ) -> None:
         events = [
             ServerSentEvent(event="text", data='{"text": "some"}'),
             ServerSentEvent(event="error", data='{"allow_retry": false}'),
@@ -746,7 +752,9 @@ class Test_BotContext:
                 ):
                     pass
 
-        # error with allow_retry=true
+    async def test_perform_query_request_error_with_allow_retry_true(
+        self, mock_bot_context: _BotContext, mock_request: QueryRequest
+    ) -> None:
         events = [
             ServerSentEvent(event="text", data='{"text": "some"}'),
             ServerSentEvent(event="error", data='{"allow_retry": true}'),
@@ -758,6 +766,150 @@ class Test_BotContext:
                     request=mock_request, tools=None, tool_calls=None, tool_results=None
                 ):
                     pass
+
+    async def test_perform_query_request_text_events_with_index(
+        self, mock_bot_context: _BotContext, mock_request: QueryRequest
+    ) -> None:
+        events = [
+            ServerSentEvent(event="text", data='{"text": "hello", "index": 0}'),
+            ServerSentEvent(event="text", data='{"text": " world", "index": 0}'),
+            ServerSentEvent(event="text", data='{"text": "hi.", "index": 1}'),
+            # Bad index value should be ignored
+            ServerSentEvent(
+                event="text", data='{"text": "text with bad index", "index": "banana"}'
+            ),
+            ServerSentEvent(event="done", data="{}"),
+            ServerSentEvent(
+                event="text", data='{"text": "blahblah", "index": 2}'
+            ),  # after done; ignored
+        ]
+        with patch("httpx_sse.aconnect_sse") as mock_connect_sse:
+            mock_connect_sse.side_effect = self.create_sse_mock(events)
+            messages = []
+            async for message in mock_bot_context.perform_query_request(
+                request=mock_request, tools=None, tool_calls=None, tool_results=None
+            ):
+                messages.append(message)
+
+            assert messages == [
+                BotMessage(
+                    text="hello",
+                    raw_response={
+                        "type": "text",
+                        "text": '{"text": "hello", "index": 0}',
+                    },
+                    full_prompt=repr(mock_request),
+                    is_replace_response=False,
+                    index=0,
+                ),
+                BotMessage(
+                    text=" world",
+                    raw_response={
+                        "type": "text",
+                        "text": '{"text": " world", "index": 0}',
+                    },
+                    full_prompt=repr(mock_request),
+                    is_replace_response=False,
+                    index=0,
+                ),
+                BotMessage(
+                    text="hi.",
+                    raw_response={
+                        "type": "text",
+                        "text": '{"text": "hi.", "index": 1}',
+                    },
+                    full_prompt=repr(mock_request),
+                    is_replace_response=False,
+                    index=1,
+                ),
+                BotMessage(
+                    text="text with bad index",
+                    raw_response={
+                        "type": "text",
+                        "text": '{"text": "text with bad index", "index": "banana"}',
+                    },
+                    full_prompt=repr(mock_request),
+                    is_replace_response=False,
+                    index=None,
+                ),
+            ]
+
+    async def test_perform_query_request_non_text_events_with_index(
+        self, mock_bot_context: _BotContext, mock_request: QueryRequest
+    ) -> None:
+        # other events
+        events = [
+            ServerSentEvent(event="text", data='{"text": "first", "index": 0}'),
+            ServerSentEvent(
+                event="text", data='{"text": "second message", "index": 1}'
+            ),
+            ServerSentEvent(
+                event="replace_response", data='{"text": " message.", "index": 0}'
+            ),
+            ServerSentEvent(
+                event="suggested_reply",
+                data='{"text": "what do you mean?", "index": 1}',
+            ),
+            ServerSentEvent(event="json", data='{"fruit": "apple", "index": 1}'),
+            ServerSentEvent(event="ping", data='{"index": 1}'),
+            ServerSentEvent(event="done", data='{"index": 1}'),
+        ]
+        with patch("httpx_sse.aconnect_sse") as mock_connect_sse:
+            mock_connect_sse.side_effect = self.create_sse_mock(events)
+            messages = []
+            async for message in mock_bot_context.perform_query_request(
+                request=mock_request, tools=None, tool_calls=None, tool_results=None
+            ):
+                messages.append(message)
+
+            assert messages == [
+                BotMessage(
+                    text="first",
+                    raw_response={
+                        "type": "text",
+                        "text": '{"text": "first", "index": 0}',
+                    },
+                    full_prompt=repr(mock_request),
+                    is_replace_response=False,
+                    index=0,
+                ),
+                BotMessage(
+                    text="second message",
+                    raw_response={
+                        "type": "text",
+                        "text": '{"text": "second message", "index": 1}',
+                    },
+                    full_prompt=repr(mock_request),
+                    is_replace_response=False,
+                    index=1,
+                ),
+                BotMessage(
+                    text=" message.",
+                    raw_response={
+                        "type": "replace_response",
+                        "text": '{"text": " message.", "index": 0}',
+                    },
+                    full_prompt=repr(mock_request),
+                    is_replace_response=True,
+                    index=0,
+                ),
+                BotMessage(
+                    text="what do you mean?",
+                    raw_response={
+                        "type": "suggested_reply",
+                        "text": '{"text": "what do you mean?", "index": 1}',
+                    },
+                    full_prompt=repr(mock_request),
+                    is_suggested_reply=True,
+                    index=1,
+                ),
+                BotMessage(
+                    text="",
+                    full_prompt=repr(mock_request),
+                    data={"fruit": "apple", "index": 1},
+                    index=1,
+                ),
+            ]
 
     @pytest.mark.parametrize(
         "events",
