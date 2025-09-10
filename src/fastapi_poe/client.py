@@ -217,7 +217,7 @@ class _BotContext:
                             name=await self._get_single_json_field(
                                 event.data, "file", message_id, "name"
                             ),
-                            inline_ref=await self._get_single_json_field(
+                            inline_ref=await self._get_single_json_string_field_safe(
                                 event.data, "file", message_id, "inline_ref"
                             ),
                         ),
@@ -330,6 +330,17 @@ class _BotContext:
             )
             raise BotErrorNoRetry(f"Expected string in '{context}' event")
         return text
+
+    async def _get_single_json_string_field_safe(
+        self, data: str, context: str, message_id: Identifier, field: str
+    ) -> Optional[str]:
+        data_dict = await self._load_json_dict(data, context, message_id)
+        if field not in data_dict:
+            return None
+        result = data_dict[field]
+        if not isinstance(result, str):
+            return None
+        return result
 
     async def _get_single_json_integer_field_safe(
         self, data: str, context: str, message_id: Identifier, field: str
