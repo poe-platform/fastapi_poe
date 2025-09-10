@@ -338,7 +338,7 @@ class _BotContext:
         if field not in data_dict:
             return None
         result = data_dict[field]
-        if not isinstance(result, str):
+        if result is not None and not isinstance(result, str):
             return None
         return result
 
@@ -349,7 +349,7 @@ class _BotContext:
         if field not in data_dict:
             return None
         result = data_dict[field]
-        if not isinstance(result, int):
+        if result is not None and not isinstance(result, int):
             return None
         return result
 
