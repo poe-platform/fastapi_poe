@@ -629,12 +629,12 @@ class ErrorResponse(PartialResponse):
     Similar to `PartialResponse`. Yield this to communicate errors from your bot.
 
     #### Fields:
-    - `allow_retry` (`bool = False`): Whether or not to allow a user to retry on error.
+    - `allow_retry` (`bool = True`): Whether or not to allow a user to retry on error.
     - `error_type` (`Optional[ErrorType] = None`): An enum indicating what error to display.
 
     """
 
-    allow_retry: bool = False
+    allow_retry: bool = True
     error_type: Optional[ErrorType] = None
 
 
