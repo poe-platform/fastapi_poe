@@ -79,6 +79,20 @@ class Attachment(BaseModel):
     parsed_content: Optional[str] = None
 
 
+class MessageReaction(BaseModel):
+    """
+
+    Reaction to a message.
+    #### Fields:
+    - `user_id` (`Identifier`)
+    - `reaction` (`str`)
+
+    """
+
+    user_id: Identifier
+    reaction: str
+
+
 class ProtocolMessage(BaseModel):
     """
 
@@ -95,6 +109,8 @@ class ProtocolMessage(BaseModel):
     - `feedback` (`list[MessageFeedback] = []`)
     - `attachments` (`list[Attachment] = []`)
     - `metadata` (`Optional[str] = None`)
+    - `referenced_message` (`Optional["ProtocolMessage"] = None`)
+    - `reactions` (`list[MessageReaction] = []`)
 
     """
 
@@ -109,6 +125,8 @@ class ProtocolMessage(BaseModel):
     feedback: list[MessageFeedback] = Field(default_factory=list)
     attachments: list[Attachment] = Field(default_factory=list)
     metadata: Optional[str] = None
+    referenced_message: Optional["ProtocolMessage"] = None
+    reactions: list[MessageReaction] = Field(default_factory=list)
 
 
 class RequestContext(BaseModel):
