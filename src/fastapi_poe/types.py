@@ -84,8 +84,9 @@ class MessageReaction(BaseModel):
 
     Reaction to a message.
     #### Fields:
-    - `user_id` (`Identifier`)
-    - `reaction` (`str`)
+    - `user_id` (`Identifier`): An anonymized identifier representing the
+    user who reacted to the message.
+    - `reaction` (`str`): The reaction to the message.
 
     """
 
