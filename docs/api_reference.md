@@ -260,10 +260,12 @@ also includes information needed to identify the user for compute point usage.
 - `api_key` (`str = ""`): Your Poe API key, available at poe.com/api_key. You will need
 this in case you are trying to use this function from a script/shell. Note that if an `api_key`
 is provided, compute points will be charged on the account corresponding to the `api_key`.
-- tools: (`Optional[list[ToolDefinition]] = None`): An list of ToolDefinition objects describing
+- tools: (`Optional[list[ToolDefinition]] = None`): A list of ToolDefinition objects describing
 the functions you have. This is used for OpenAI function calling.
-- tool_executables: (`Optional[list[Callable]] = None`): An list of functions corresponding
-to the ToolDefinitions. This is used for OpenAI function calling.
+- tool_executables: (`Optional[list[Callable]] = None`): A list of functions corresponding
+to the ToolDefinitions. This is used for OpenAI function calling. When this is set, the
+LLM-suggested tools will automatically run once, before passing the results back to the LLM for
+a final response.
 
 
 
@@ -384,6 +386,7 @@ on Poe.
 - `stop_sequences` (`list[str] = []`)
 - `language_code` (`str = "en"`): BCP 47 language code of the user's client.
 - `bot_query_id` (`str = ""`): an identifier representing a bot query.
+- `users` (`list[User] = []`): list of users in the chat.
 
 
 
@@ -393,16 +396,63 @@ on Poe.
 
 A message as used in the Poe protocol.
 #### Fields:
-- `role` (`Literal["system", "user", "bot"]`)
-- `sender_id` (`Optional[str]`)
-- `content` (`str`)
-- `parameters` (`dict[str, Any] = {}`)
-- `content_type` (`ContentType="text/markdown"`)
-- `timestamp` (`int = 0`)
-- `message_id` (`str = ""`)
-- `feedback` (`list[MessageFeedback] = []`)
-- `attachments` (`list[Attachment] = []`)
-- `metadata` (`Optional[str] = None`)
+- `role` (`Role`): Message sender type. This is deprecated, use `sender` instead.
+- `message_type` (`Optional[MessageType] = None`): Type of the message.
+- `sender_id` (`Optional[str]`): Sender ID of the message. This is deprecated, use
+  `sender` instead.
+- `sender` (`Sender`): Sender of the message.
+- `content` (`str`): Content of the message.
+- `parameters` (`dict[str, Any] = {}`): Parameters for the message.
+- `content_type` (`ContentType="text/markdown"`): Content type of the message.
+- `timestamp` (`int = 0`): Timestamp of the message.
+- `message_id` (`str = ""`): Message ID for the message.
+- `feedback` (`list[MessageFeedback] = []`): Feedback for the message.
+- `attachments` (`list[Attachment] = []`): Attachments for the message.
+- `metadata` (`Optional[str] = None`): Metadata associated with the message.
+- `referenced_message` (`Optional["ProtocolMessage"] = None`): Message referenced by
+  this message (if any).
+- `reactions` (`list[MessageReaction] = []`): Reactions to the message.
+
+
+
+---
+
+## `fp.Sender`
+
+Sender of a message.
+#### Fields:
+- `role` (`Role`): Message sender type.
+- `id` (`Optional[Identifier] = None`): An anonymized identifier representing the sender.
+- `name` (`Optional[str] = None`): The name of the sender.
+If sender is a bot, this will be the name of the bot.
+If sender is a user, this will be the name of the user if user name is available for this chat.
+Typically, user name is only available in a chat of multiple users. Please note that a user
+can change their name anytime and different users with different id can share the same name.
+
+
+
+---
+
+## `fp.User`
+
+User in a chat.
+#### Fields:
+- `id` (`Identifier`): An anonymized identifier representing a user.
+- `name` (`Optional[str] = None`): The name of the user if user name is available for this chat.
+Typically, user name is only available in a chat of multiple users. Please note that a user
+can change their name anytime and different users with different id can share the same name.
+
+
+
+---
+
+## `fp.MessageReaction`
+
+Reaction to a message.
+#### Fields:
+- `user_id` (`Identifier`): An anonymized identifier representing the
+user who reacted to the message.
+- `reaction` (`str`): The reaction to the message.
 
 
 
@@ -433,7 +483,7 @@ displayed text to the user and replace it with the provided text value.
 Similar to `PartialResponse`. Yield this to communicate errors from your bot.
 
 #### Fields:
-- `allow_retry` (`bool = False`): Whether or not to allow a user to retry on error.
+- `allow_retry` (`bool = True`): Whether or not to allow a user to retry on error.
 - `error_type` (`Optional[ErrorType] = None`): An enum indicating what error to display.
 
 
@@ -603,8 +653,7 @@ OpenAI function calling.
 #### Fields:
 - `id` (`str`)
 - `type` (`str`)
-- `function` (`FunctionDefinition`): Look at the source code for a detailed description
-of what this means.
+- `function` (`FunctionDefinition`): The function name (string) and arguments (JSON string).
 
 
 
