@@ -427,7 +427,7 @@ Sender of a message.
 If sender is a bot, this will be the name of the bot.
 If sender is a user, this will be the name of the user if user name is available for this chat.
 Typically, user name is only available in a chat of multiple users. Please note that a user
-can change their name anytime and different users with different id can share the same name.
+can change their name anytime and different users with different `id` can share the same name.
 
 
 
@@ -440,7 +440,7 @@ User in a chat.
 - `id` (`Identifier`): An anonymized identifier representing a user.
 - `name` (`Optional[str] = None`): The name of the user if user name is available for this chat.
 Typically, user name is only available in a chat of multiple users. Please note that a user
-can change their name anytime and different users with different id can share the same name.
+can change their name anytime and different users with different `id` can share the same name.
 
 
 
