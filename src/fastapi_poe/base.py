@@ -47,6 +47,7 @@ from fastapi_poe.types import (
     ReportFeedbackRequest,
     ReportReactionRequest,
     RequestContext,
+    Sender,
     SettingsRequest,
     SettingsResponse,
 )
@@ -531,7 +532,11 @@ class PoeBot:
                         content=attachment.parsed_content,
                     )
                     text_attachment_messages.append(
-                        ProtocolMessage(role="user", content=url_attachment_content)
+                        ProtocolMessage(
+                            role="user",
+                            sender=Sender(role="user"),
+                            content=url_attachment_content,
+                        )
                     )
                 elif (
                     attachment.content_type.startswith("text/")
@@ -542,7 +547,11 @@ class PoeBot:
                         attachment_parsed_content=attachment.parsed_content,
                     )
                     text_attachment_messages.append(
-                        ProtocolMessage(role="user", content=text_attachment_content)
+                        ProtocolMessage(
+                            role="user",
+                            sender=Sender(role="user"),
+                            content=text_attachment_content,
+                        )
                     )
                 elif "image" in attachment.content_type:
                     try:
@@ -559,7 +568,11 @@ class PoeBot:
                         parsed_image_description=parsed_content_text,
                     )
                     image_attachment_messages.append(
-                        ProtocolMessage(role="user", content=image_attachment_content)
+                        ProtocolMessage(
+                            role="user",
+                            sender=Sender(role="user"),
+                            content=image_attachment_content,
+                        )
                     )
         modified_query = query_request.model_copy(
             update={

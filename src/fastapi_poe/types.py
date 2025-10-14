@@ -15,6 +15,7 @@ ErrorType: TypeAlias = Literal[
     "user_caused_error",
     "privacy_authorization_error",
 ]
+Role: TypeAlias = Literal["system", "user", "bot", "tool"]
 
 
 class MessageFeedback(BaseModel):
@@ -94,14 +95,45 @@ class MessageReaction(BaseModel):
     reaction: str
 
 
+class Sender(BaseModel):
+    """
+
+    Sender of a message.
+    #### Fields:
+    - `role` (`Role`): The role of the sender.
+    - `id` (`Optional[Identifier] = None`): An anonymized identifier representing the sender.
+    - `name` (`Optional[str] = None`): The name of the sender. For example, if sender is a bot,
+      this will be the name of the bot.
+
+    """
+
+    role: Role
+    id: Optional[Identifier] = None
+    name: Optional[str] = None
+
+
+class User(BaseModel):
+    """
+    User in a chat.
+    #### Fields:
+    - `id` (`Identifier`): An anonymized identifier representing a user.
+    - `name` (`Optional[str] = None`): The name of the user.
+
+    """
+
+    id: Identifier
+    name: Optional[str] = None
+
+
 class ProtocolMessage(BaseModel):
     """
 
     A message as used in the Poe protocol.
     #### Fields:
-    - `role` (`Literal["system", "user", "bot", "tool"]`)
+    - `role` (`Role`)
     - `message_type` (`Optional[MessageType] = None`)
     - `sender_id` (`Optional[str]`)
+    - `sender` (`Sender`)
     - `content` (`str`)
     - `parameters` (`dict[str, Any] = {}`)
     - `content_type` (`ContentType="text/markdown"`)
@@ -115,9 +147,10 @@ class ProtocolMessage(BaseModel):
 
     """
 
-    role: Literal["system", "user", "bot", "tool"]
+    role: Role
     message_type: Optional[MessageType] = None
     sender_id: Optional[str] = None
+    sender: Sender
     content: str
     parameters: dict[str, Any] = {}
     content_type: ContentType = "text/markdown"
@@ -165,6 +198,7 @@ class QueryRequest(BaseRequest):
     - `stop_sequences` (`list[str] = []`)
     - `language_code` (`str = "en"`): BCP 47 language code of the user's client.
     - `bot_query_id` (`str = ""`): an identifier representing a bot query.
+    - `users` (`list[User] = []`): list of users in the chat.
 
     """
 
@@ -181,6 +215,7 @@ class QueryRequest(BaseRequest):
     stop_sequences: list[str] = []
     language_code: str = "en"
     bot_query_id: Identifier = ""
+    users: list[User] = []
 
 
 class SettingsRequest(BaseRequest):

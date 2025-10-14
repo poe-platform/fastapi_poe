@@ -25,6 +25,7 @@ from fastapi_poe.types import (
     ProtocolMessage,
     QueryRequest,
     RequestContext,
+    Sender,
 )
 from sse_starlette import ServerSentEvent
 from starlette.routing import Route
@@ -114,7 +115,11 @@ def mock_request() -> QueryRequest:
     return QueryRequest(
         version="1.0",
         type="query",
-        query=[ProtocolMessage(role="user", content="Hello, world!")],
+        query=[
+            ProtocolMessage(
+                role="user", content="Hello, world!", sender=Sender(role="user")
+            )
+        ],
         user_id="123",
         conversation_id="123",
         message_id="456",
@@ -245,11 +250,12 @@ class TestPoeBot:
         )
         # Create mock protocol messages
         message_without_attachments = ProtocolMessage(
-            role="user", content="Hello, world!"
+            role="user", content="Hello, world!", sender=Sender(role="user")
         )
         message_with_attachments = ProtocolMessage(
             role="user",
             content="Here's some attachments",
+            sender=Sender(role="user"),
             attachments=[
                 mock_text_attachment,
                 mock_image_attachment,
@@ -276,6 +282,7 @@ class TestPoeBot:
             message_without_attachments,
             ProtocolMessage(
                 role="user",
+                sender=Sender(role="user"),
                 content=TEXT_ATTACHMENT_TEMPLATE.format(
                     attachment_name=mock_text_attachment.name,
                     attachment_parsed_content=mock_text_attachment.parsed_content,
@@ -283,6 +290,7 @@ class TestPoeBot:
             ),
             ProtocolMessage(
                 role="user",
+                sender=Sender(role="user"),
                 content=TEXT_ATTACHMENT_TEMPLATE.format(
                     attachment_name=mock_pdf_attachment.name,
                     attachment_parsed_content=mock_pdf_attachment.parsed_content,
@@ -290,6 +298,7 @@ class TestPoeBot:
             ),
             ProtocolMessage(
                 role="user",
+                sender=Sender(role="user"),
                 content=URL_ATTACHMENT_TEMPLATE.format(
                     attachment_name=mock_html_attachment.name,
                     content=mock_html_attachment.parsed_content,
@@ -297,6 +306,7 @@ class TestPoeBot:
             ),
             ProtocolMessage(
                 role="user",
+                sender=Sender(role="user"),
                 content=IMAGE_VISION_ATTACHMENT_TEMPLATE.format(
                     filename=mock_image_attachment.parsed_content.split("***")[0],
                     parsed_image_description=mock_image_attachment.parsed_content.split(
@@ -306,6 +316,7 @@ class TestPoeBot:
             ),
             ProtocolMessage(
                 role="user",
+                sender=Sender(role="user"),
                 content=IMAGE_VISION_ATTACHMENT_TEMPLATE.format(
                     filename=mock_image_attachment_2.name,
                     parsed_image_description=mock_image_attachment_2.parsed_content,
@@ -325,6 +336,7 @@ class TestPoeBot:
         mock_protocol_messages = [
             ProtocolMessage(
                 role="user",
+                sender=Sender(role="user"),
                 content="Hello, world!",
                 attachments=[
                     Attachment(
@@ -337,6 +349,7 @@ class TestPoeBot:
             ),
             ProtocolMessage(
                 role="user",
+                sender=Sender(role="user"),
                 content="Hello, world!",
                 attachments=[
                     Attachment(
@@ -347,11 +360,14 @@ class TestPoeBot:
                     )
                 ],
             ),
-            ProtocolMessage(role="bot", content="Hello, world!"),
+            ProtocolMessage(
+                role="bot", sender=Sender(role="bot"), content="Hello, world!"
+            ),
         ]
         expected_protocol_messages = [
             ProtocolMessage(
                 role="user",
+                sender=Sender(role="user"),
                 content="Hello, world!\n\nHello, world!",
                 attachments=[
                     Attachment(
@@ -368,7 +384,9 @@ class TestPoeBot:
                     ),
                 ],
             ),
-            ProtocolMessage(role="bot", content="Hello, world!"),
+            ProtocolMessage(
+                role="bot", sender=Sender(role="bot"), content="Hello, world!"
+            ),
         ]
         assert (
             basic_bot.make_prompt_author_role_alternated(mock_protocol_messages)
