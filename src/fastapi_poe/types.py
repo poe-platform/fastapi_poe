@@ -147,9 +147,9 @@ class ProtocolMessage(BaseModel):
 
     """
 
-    role: Role
+    role: Role  # deprecated, please use sender instead
     message_type: Optional[MessageType] = None
-    sender_id: Optional[str] = None
+    sender_id: Optional[str] = None  # deprecated, please use sender instead
     sender: Sender
     content: str
     parameters: dict[str, Any] = {}
