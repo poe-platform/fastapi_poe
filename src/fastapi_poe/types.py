@@ -100,10 +100,13 @@ class Sender(BaseModel):
 
     Sender of a message.
     #### Fields:
-    - `role` (`Role`): The role of the sender.
+    - `role` (`Role`): Message sender type.
     - `id` (`Optional[Identifier] = None`): An anonymized identifier representing the sender.
-    - `name` (`Optional[str] = None`): The name of the sender. For example, if sender is a bot,
-      this will be the name of the bot.
+    - `name` (`Optional[str] = None`): The name of the sender.
+    If sender is a bot, this will be the name of the bot.
+    If sender is a user, this will be the name of the user if user name is available for this chat.
+    Typically, user name is only available in a chat of multiple users. Please note that a user
+    can change their name anytime and different users with different id can share the same name.
 
     """
 
@@ -114,10 +117,13 @@ class Sender(BaseModel):
 
 class User(BaseModel):
     """
+
     User in a chat.
     #### Fields:
     - `id` (`Identifier`): An anonymized identifier representing a user.
-    - `name` (`Optional[str] = None`): The name of the user.
+    - `name` (`Optional[str] = None`): The name of the user if user name is available for this chat.
+    Typically, user name is only available in a chat of multiple users. Please note that a user
+    can change their name anytime and different users with different id can share the same name.
 
     """
 
@@ -130,26 +136,28 @@ class ProtocolMessage(BaseModel):
 
     A message as used in the Poe protocol.
     #### Fields:
-    - `role` (`Role`)
-    - `message_type` (`Optional[MessageType] = None`)
-    - `sender_id` (`Optional[str]`)
-    - `sender` (`Sender`)
-    - `content` (`str`)
-    - `parameters` (`dict[str, Any] = {}`)
-    - `content_type` (`ContentType="text/markdown"`)
-    - `timestamp` (`int = 0`)
-    - `message_id` (`str = ""`)
-    - `feedback` (`list[MessageFeedback] = []`)
-    - `attachments` (`list[Attachment] = []`)
-    - `metadata` (`Optional[str] = None`)
-    - `referenced_message` (`Optional["ProtocolMessage"] = None`)
-    - `reactions` (`list[MessageReaction] = []`)
+    - `role` (`Role`): Message sender type. This is deprecated, use `sender` instead.
+    - `message_type` (`Optional[MessageType] = None`): Type of the message.
+    - `sender_id` (`Optional[str]`): Sender ID of the message. This is deprecated, use
+      `sender` instead.
+    - `sender` (`Sender`): Sender of the message.
+    - `content` (`str`): Content of the message.
+    - `parameters` (`dict[str, Any] = {}`): Parameters for the message.
+    - `content_type` (`ContentType="text/markdown"`): Content type of the message.
+    - `timestamp` (`int = 0`): Timestamp of the message.
+    - `message_id` (`str = ""`): Message ID for the message.
+    - `feedback` (`list[MessageFeedback] = []`): Feedback for the message.
+    - `attachments` (`list[Attachment] = []`): Attachments for the message.
+    - `metadata` (`Optional[str] = None`): Metadata associated with the message.
+    - `referenced_message` (`Optional["ProtocolMessage"] = None`): Message referenced by
+      this message (if any).
+    - `reactions` (`list[MessageReaction] = []`): Reactions to the message.
 
     """
 
-    role: Role  # deprecated, please use sender instead
+    role: Role
     message_type: Optional[MessageType] = None
-    sender_id: Optional[str] = None  # deprecated, please use sender instead
+    sender_id: Optional[str] = None
     sender: Sender
     content: str
     parameters: dict[str, Any] = {}
