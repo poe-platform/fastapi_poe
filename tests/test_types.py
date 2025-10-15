@@ -177,6 +177,12 @@ class TestProtocolMessage:
         assert msg3.referenced_message.referenced_message is not None
         assert msg3.referenced_message.referenced_message.message_id == "msg1"
 
+    def test_protocol_message_sender_as_role_string(self) -> None:
+        msg = ProtocolMessage(role="user", sender="user", content="Hello, world!")
+        assert msg.role == "user"
+        assert msg.sender == "user"
+        assert msg.content == "Hello, world!"
+
 
 class TestQueryRequest:
 

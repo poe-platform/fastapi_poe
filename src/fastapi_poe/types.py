@@ -140,7 +140,7 @@ class ProtocolMessage(BaseModel):
     - `message_type` (`Optional[MessageType] = None`): Type of the message.
     - `sender_id` (`Optional[str]`): Sender ID of the message. This is deprecated, use
       `sender` instead.
-    - `sender` (`Sender`): Sender of the message.
+    - `sender` (`Union[Role, Sender]`): Sender of the message.
     - `content` (`str`): Content of the message.
     - `parameters` (`dict[str, Any] = {}`): Parameters for the message.
     - `content_type` (`ContentType="text/markdown"`): Content type of the message.
@@ -158,7 +158,7 @@ class ProtocolMessage(BaseModel):
     role: Role
     message_type: Optional[MessageType] = None
     sender_id: Optional[str] = None
-    sender: Sender
+    sender: Union[Role, Sender]
     content: str
     parameters: dict[str, Any] = {}
     content_type: ContentType = "text/markdown"
