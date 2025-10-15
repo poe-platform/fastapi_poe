@@ -108,6 +108,7 @@ class TestProtocolMessage:
             role="user", sender=Sender(role="user"), content="Hello, world!"
         )
         assert msg.role == "user"
+        assert isinstance(msg.sender, Sender)
         assert msg.sender.role == "user"
         assert msg.content == "Hello, world!"
         assert msg.reactions == []
