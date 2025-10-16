@@ -670,6 +670,7 @@ def get_bot_response(
     tool_executables: Optional[list[Callable]] = None,
     temperature: Optional[float] = None,
     skip_system_prompt: Optional[bool] = None,
+    adopt_current_bot_name: Optional[bool] = None,
     logit_bias: Optional[dict[str, float]] = None,
     stop_sequences: Optional[list[str]] = None,
     base_url: str = "https://api.poe.com/bot/",
@@ -693,6 +694,8 @@ def get_bot_response(
     - `stop_sequences` (`Optional[list[str]] = None`): The stop sequences to use for the bot.
     - `base_url` (`str = "https://api.poe.com/bot/"`): The base URL to use for the bot. This is
     mainly for internal testing and is not expected to be changed.
+    - `adopt_current_bot_name` (`Optional[bool] = None`): Makes the called bot adopt
+    the identity of the calling bot
     - `session` (`Optional[httpx.AsyncClient] = None`): The session to use for the bot.
     """
     additional_params = {}
@@ -705,6 +708,8 @@ def get_bot_response(
         additional_params["logit_bias"] = logit_bias
     if stop_sequences is not None:
         additional_params["stop_sequences"] = stop_sequences
+    if adopt_current_bot_name is not None:
+        additional_params["adopt_current_bot_name"] = adopt_current_bot_name
 
     query = QueryRequest(
         query=messages,
@@ -736,6 +741,7 @@ def get_bot_response_sync(
     temperature: Optional[float] = None,
     skip_system_prompt: Optional[bool] = None,
     logit_bias: Optional[dict[str, float]] = None,
+    adopt_current_bot_name: Optional[bool] = None,
     stop_sequences: Optional[list[str]] = None,
     base_url: str = "https://api.poe.com/bot/",
     session: Optional[httpx.AsyncClient] = None,
@@ -762,6 +768,8 @@ def get_bot_response_sync(
     - `stop_sequences` (`Optional[list[str]] = None`): The stop sequences to use for the bot.
     - `base_url` (`str = "https://api.poe.com/bot/"`): The base URL to use for the bot. This is
     mainly for internal testing and is not expected to be changed.
+    - `adopt_current_bot_name` (`Optional[bool] = None`): Makes the called bot adopt
+    the identity of the calling bot
     - `session` (`Optional[httpx.AsyncClient] = None`): The session to use for the bot.
 
     """
@@ -775,6 +783,7 @@ def get_bot_response_sync(
             tool_executables=tool_executables,
             temperature=temperature,
             skip_system_prompt=skip_system_prompt,
+            adopt_current_bot_name=adopt_current_bot_name,
             logit_bias=logit_bias,
             stop_sequences=stop_sequences,
             base_url=base_url,
