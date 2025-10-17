@@ -260,10 +260,12 @@ also includes information needed to identify the user for compute point usage.
 - `api_key` (`str = ""`): Your Poe API key, available at poe.com/api_key. You will need
 this in case you are trying to use this function from a script/shell. Note that if an `api_key`
 is provided, compute points will be charged on the account corresponding to the `api_key`.
-- tools: (`Optional[list[ToolDefinition]] = None`): An list of ToolDefinition objects describing
+- tools: (`Optional[list[ToolDefinition]] = None`): A list of ToolDefinition objects describing
 the functions you have. This is used for OpenAI function calling.
-- tool_executables: (`Optional[list[Callable]] = None`): An list of functions corresponding
-to the ToolDefinitions. This is used for OpenAI function calling.
+- tool_executables: (`Optional[list[Callable]] = None`): A list of functions corresponding
+to the ToolDefinitions. This is used for OpenAI function calling. When this is set, the
+LLM-suggested tools will automatically run once, before passing the results back to the LLM for
+a final response.
 
 
 
@@ -393,7 +395,8 @@ on Poe.
 
 A message as used in the Poe protocol.
 #### Fields:
-- `role` (`Literal["system", "user", "bot"]`)
+- `role` (`Literal["system", "user", "bot", "tool"]`)
+- `message_type` (`Optional[MessageType] = None`)
 - `sender_id` (`Optional[str]`)
 - `content` (`str`)
 - `parameters` (`dict[str, Any] = {}`)
@@ -603,8 +606,7 @@ OpenAI function calling.
 #### Fields:
 - `id` (`str`)
 - `type` (`str`)
-- `function` (`FunctionDefinition`): Look at the source code for a detailed description
-of what this means.
+- `function` (`FunctionDefinition`): The function name (string) and arguments (JSON string).
 
 
 

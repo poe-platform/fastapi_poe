@@ -1024,6 +1024,27 @@ def test_get_bot_response_sync(
     assert concatenated_text == "Hello, world!"
 
 
+@patch("fastapi_poe.client._BotContext.perform_query_request")
+@pytest.mark.asyncio
+async def test_get_bot_response_with_adopt_current_bot_name(
+    mock_perform_query_request: Mock,
+    mock_text_only_query_response: AsyncGenerator[BotMessage, None],
+) -> None:
+    """Test that adopt_current_bot_name parameter works with get_bot_response."""
+    mock_perform_query_request.return_value = mock_text_only_query_response
+
+    messages = [ProtocolMessage(role="user", content="Hello, world!")]
+
+    concatenated_text = ""
+    async for message in get_bot_response(
+        messages, "test_bot", api_key="test_api_key", adopt_current_bot_name=True
+    ):
+        concatenated_text += message.text
+
+    assert concatenated_text == "Hello, world!"
+    mock_perform_query_request.assert_called_once()
+
+
 @pytest.mark.parametrize(
     "test_input, limit, expected",
     [
