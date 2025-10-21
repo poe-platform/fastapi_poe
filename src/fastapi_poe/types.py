@@ -589,10 +589,11 @@ class SettingsResponse(BaseModel):
 class AttachmentUploadResponse(BaseModel):
     """
 
-    The result of a post_message_attachment request.
+    The result of a post_message_attachment request or file event in bot response.
     #### Fields:
     - `attachment_url` (`Optional[str]`): The URL of the attachment.
     - `mime_type` (`Optional[str]`): The MIME type of the attachment.
+    - `name` (`Optional[str]`): The name of the attachment. Only populated when the attachment originates from a file event in bot response, not from post_message_attachment.
     - `inline_ref` (`Optional[str]`): The inline reference of the attachment.
     if post_message_attachment is called with is_inline=False, this will be None.
 
@@ -600,6 +601,7 @@ class AttachmentUploadResponse(BaseModel):
 
     attachment_url: Optional[str]
     mime_type: Optional[str]
+    name: Optional[str] = None
     inline_ref: Optional[str]
 
 
