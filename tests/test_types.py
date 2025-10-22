@@ -1,6 +1,5 @@
 import pydantic
 import pytest
-
 from fastapi_poe.types import (
     CostItem,
     MessageReaction,
@@ -177,6 +176,7 @@ class TestProtocolMessage:
         msg = ProtocolMessage(role="user", sender=sender, content="Hello, world!")
         assert msg.role == "user"
         assert msg.sender == sender
+        assert msg.sender is not None
         assert msg.sender.id == "user123"
         assert msg.sender.name == "TestUser"
         assert msg.content == "Hello, world!"

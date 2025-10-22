@@ -38,11 +38,7 @@ def mock_request() -> QueryRequest:
     return QueryRequest(
         version="1.2",
         type="query",
-        query=[
-            ProtocolMessage(
-                role="user", content="Hello, world!", sender=Sender(role="user")
-            )
-        ],
+        query=[ProtocolMessage(role="user", content="Hello, world!", sender=Sender())],
         user_id="123",
         conversation_id="456",
         message_id="789",
@@ -991,9 +987,7 @@ async def test_get_bot_response(
     mock_perform_query_request.return_value = mock_text_only_query_response
 
     mock_protocol_messages = [
-        ProtocolMessage(
-            role="user", content="Hello, world!", sender=Sender(role="user")
-        )
+        ProtocolMessage(role="user", content="Hello, world!", sender=Sender())
     ]
 
     concatenated_text = ""
@@ -1018,9 +1012,7 @@ def test_get_bot_response_sync(
     mock_perform_query_request.return_value = mock_text_only_query_response
 
     mock_protocol_messages = [
-        ProtocolMessage(
-            role="user", content="Hello, world!", sender=Sender(role="user")
-        )
+        ProtocolMessage(role="user", content="Hello, world!", sender=Sender())
     ]
 
     concatenated_text = ""

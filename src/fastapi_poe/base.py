@@ -533,9 +533,7 @@ class PoeBot:
                     )
                     text_attachment_messages.append(
                         ProtocolMessage(
-                            role="user",
-                            sender=Sender(role="user"),
-                            content=url_attachment_content,
+                            role="user", sender=Sender(), content=url_attachment_content
                         )
                     )
                 elif (
@@ -549,7 +547,7 @@ class PoeBot:
                     text_attachment_messages.append(
                         ProtocolMessage(
                             role="user",
-                            sender=Sender(role="user"),
+                            sender=Sender(),
                             content=text_attachment_content,
                         )
                     )
@@ -570,7 +568,7 @@ class PoeBot:
                     image_attachment_messages.append(
                         ProtocolMessage(
                             role="user",
-                            sender=Sender(role="user"),
+                            sender=Sender(),
                             content=image_attachment_content,
                         )
                     )
