@@ -1,5 +1,6 @@
 import pydantic
 import pytest
+
 from fastapi_poe.types import (
     CostItem,
     MessageReaction,
@@ -44,26 +45,22 @@ def test_cost_item() -> None:
 class TestSender:
 
     def test_sender_basic(self) -> None:
-        sender = Sender(role="user")
-        assert sender.role == "user"
+        sender = Sender()
         assert sender.id is None
         assert sender.name is None
 
     def test_sender_with_id(self) -> None:
-        sender = Sender(role="user", id="user123")
-        assert sender.role == "user"
+        sender = Sender(id="user123")
         assert sender.id == "user123"
         assert sender.name is None
 
     def test_sender_with_name(self) -> None:
-        sender = Sender(role="bot", name="TestBot")
-        assert sender.role == "bot"
+        sender = Sender(name="TestBot")
         assert sender.id is None
         assert sender.name == "TestBot"
 
     def test_sender_with_all_fields(self) -> None:
-        sender = Sender(role="bot", id="bot456", name="MyBot")
-        assert sender.role == "bot"
+        sender = Sender(id="bot456", name="MyBot")
         assert sender.id == "bot456"
         assert sender.name == "MyBot"
 
@@ -104,12 +101,9 @@ class TestMessageReaction:
 class TestProtocolMessage:
 
     def test_protocol_message_basic(self) -> None:
-        msg = ProtocolMessage(
-            role="user", sender=Sender(role="user"), content="Hello, world!"
-        )
+        msg = ProtocolMessage(role="user", sender=Sender(), content="Hello, world!")
         assert msg.role == "user"
         assert isinstance(msg.sender, Sender)
-        assert msg.sender.role == "user"
         assert msg.content == "Hello, world!"
         assert msg.reactions == []
         assert msg.referenced_message is None
@@ -117,7 +111,7 @@ class TestProtocolMessage:
     def test_protocol_message_with_reactions(self) -> None:
         msg = ProtocolMessage(
             role="user",
-            sender=Sender(role="user"),
+            sender=Sender(),
             content="Hello!",
             reactions=[
                 MessageReaction(user_id="user1", reaction="like"),
@@ -133,13 +127,13 @@ class TestProtocolMessage:
     def test_protocol_message_with_referenced_message(self) -> None:
         referenced_msg = ProtocolMessage(
             role="user",
-            sender=Sender(role="user"),
+            sender=Sender(),
             content="Original message",
             message_id="msg123",
         )
         reply_msg = ProtocolMessage(
             role="bot",
-            sender=Sender(role="bot"),
+            sender=Sender(),
             content="Reply to original",
             referenced_message=referenced_msg,
         )
@@ -147,28 +141,28 @@ class TestProtocolMessage:
         assert reply_msg.referenced_message.content == "Original message"
         assert reply_msg.referenced_message.message_id == "msg123"
 
-    def test_protocol_message_requires_sender(self) -> None:
-        with pytest.raises(pydantic.ValidationError):
-            ProtocolMessage(role="user", content="Hello")  # type: ignore
+    def test_protocol_message_optional_sender(self) -> None:
+        # Sender is now optional
+        msg = ProtocolMessage(role="user", content="Hello")
+        assert msg.role == "user"
+        assert msg.sender is None
+        assert msg.content == "Hello"
 
     def test_protocol_message_nested_referenced_message(self) -> None:
         # Test deeply nested referenced messages
         msg1 = ProtocolMessage(
-            role="user",
-            sender=Sender(role="user"),
-            content="First message",
-            message_id="msg1",
+            role="user", sender=Sender(), content="First message", message_id="msg1"
         )
         msg2 = ProtocolMessage(
             role="bot",
-            sender=Sender(role="bot"),
+            sender=Sender(),
             content="Second message",
             message_id="msg2",
             referenced_message=msg1,
         )
         msg3 = ProtocolMessage(
             role="user",
-            sender=Sender(role="user"),
+            sender=Sender(),
             content="Third message",
             message_id="msg3",
             referenced_message=msg2,
@@ -178,10 +172,13 @@ class TestProtocolMessage:
         assert msg3.referenced_message.referenced_message is not None
         assert msg3.referenced_message.referenced_message.message_id == "msg1"
 
-    def test_protocol_message_sender_as_role_string(self) -> None:
-        msg = ProtocolMessage(role="user", sender="user", content="Hello, world!")
+    def test_protocol_message_with_sender_object(self) -> None:
+        sender = Sender(id="user123", name="TestUser")
+        msg = ProtocolMessage(role="user", sender=sender, content="Hello, world!")
         assert msg.role == "user"
-        assert msg.sender == "user"
+        assert msg.sender == sender
+        assert msg.sender.id == "user123"
+        assert msg.sender.name == "TestUser"
         assert msg.content == "Hello, world!"
 
 
@@ -191,11 +188,7 @@ class TestQueryRequest:
         query_request = QueryRequest(
             version="1.0",
             type="query",
-            query=[
-                ProtocolMessage(
-                    role="user", sender=Sender(role="user"), content="Hello"
-                )
-            ],
+            query=[ProtocolMessage(role="user", sender=Sender(), content="Hello")],
             user_id="user123",
             conversation_id="conv456",
             message_id="msg789",
@@ -211,11 +204,7 @@ class TestQueryRequest:
         query_request = QueryRequest(
             version="1.0",
             type="query",
-            query=[
-                ProtocolMessage(
-                    role="user", sender=Sender(role="user"), content="Hello"
-                )
-            ],
+            query=[ProtocolMessage(role="user", sender=Sender(), content="Hello")],
             user_id="user123",
             conversation_id="conv456",
             message_id="msg789",
@@ -229,7 +218,7 @@ class TestQueryRequest:
             query=[
                 ProtocolMessage(
                     role="user",
-                    sender=Sender(role="user", id="user1"),
+                    sender=Sender(id="user1"),
                     content="Hello",
                     reactions=[MessageReaction(user_id="user2", reaction="like")],
                 )

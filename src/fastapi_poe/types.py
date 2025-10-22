@@ -15,7 +15,6 @@ ErrorType: TypeAlias = Literal[
     "user_caused_error",
     "privacy_authorization_error",
 ]
-Role: TypeAlias = Literal["system", "user", "bot", "tool"]
 
 
 class MessageFeedback(BaseModel):
@@ -100,7 +99,6 @@ class Sender(BaseModel):
 
     Sender of a message.
     #### Fields:
-    - `role` (`Role`): Message sender type.
     - `id` (`Optional[Identifier] = None`): An anonymized identifier representing the sender.
     - `name` (`Optional[str] = None`): The name of the sender.
     If sender is a bot, this will be the name of the bot.
@@ -110,7 +108,6 @@ class Sender(BaseModel):
 
     """
 
-    role: Role
     id: Optional[Identifier] = None
     name: Optional[str] = None
 
@@ -136,11 +133,11 @@ class ProtocolMessage(BaseModel):
 
     A message as used in the Poe protocol.
     #### Fields:
-    - `role` (`Role`): Message sender type. This is deprecated, use `sender` instead.
+    - `role` (`Literal["system", "user", "bot", "tool"]`): Message sender role.
     - `message_type` (`Optional[MessageType] = None`): Type of the message.
     - `sender_id` (`Optional[str]`): Sender ID of the message. This is deprecated, use
       `sender` instead.
-    - `sender` (`Union[Role, Sender]`): Sender of the message.
+    - `sender` (`Optional[Sender] = None`): Sender of the message.
     - `content` (`str`): Content of the message.
     - `parameters` (`dict[str, Any] = {}`): Parameters for the message.
     - `content_type` (`ContentType="text/markdown"`): Content type of the message.
@@ -155,10 +152,10 @@ class ProtocolMessage(BaseModel):
 
     """
 
-    role: Role
+    role: Literal["system", "user", "bot", "tool"]
     message_type: Optional[MessageType] = None
     sender_id: Optional[str] = None
-    sender: Union[Role, Sender]
+    sender: Optional[Sender] = None
     content: str
     parameters: dict[str, Any] = {}
     content_type: ContentType = "text/markdown"
