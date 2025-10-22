@@ -386,6 +386,7 @@ on Poe.
 - `stop_sequences` (`list[str] = []`)
 - `language_code` (`str = "en"`): BCP 47 language code of the user's client.
 - `bot_query_id` (`str = ""`): an identifier representing a bot query.
+- `users` (`list[User] = []`): list of users in the chat.
 
 
 
@@ -395,17 +396,62 @@ on Poe.
 
 A message as used in the Poe protocol.
 #### Fields:
-- `role` (`Literal["system", "user", "bot", "tool"]`)
-- `message_type` (`Optional[MessageType] = None`)
-- `sender_id` (`Optional[str]`)
-- `content` (`str`)
-- `parameters` (`dict[str, Any] = {}`)
-- `content_type` (`ContentType="text/markdown"`)
-- `timestamp` (`int = 0`)
-- `message_id` (`str = ""`)
-- `feedback` (`list[MessageFeedback] = []`)
-- `attachments` (`list[Attachment] = []`)
-- `metadata` (`Optional[str] = None`)
+- `role` (`Literal["system", "user", "bot", "tool"]`): Message sender role.
+- `message_type` (`Optional[MessageType] = None`): Type of the message.
+- `sender_id` (`Optional[str]`): Sender ID of the message. This is deprecated, use
+  `sender` instead.
+- `sender` (`Optional[Sender] = None`): Sender of the message.
+- `content` (`str`): Content of the message.
+- `parameters` (`dict[str, Any] = {}`): Parameters for the message.
+- `content_type` (`ContentType="text/markdown"`): Content type of the message.
+- `timestamp` (`int = 0`): Timestamp of the message.
+- `message_id` (`str = ""`): Message ID for the message.
+- `feedback` (`list[MessageFeedback] = []`): Feedback for the message.
+- `attachments` (`list[Attachment] = []`): Attachments for the message.
+- `metadata` (`Optional[str] = None`): Metadata associated with the message.
+- `referenced_message` (`Optional["ProtocolMessage"] = None`): Message referenced by
+  this message (if any).
+- `reactions` (`list[MessageReaction] = []`): Reactions to the message.
+
+
+
+---
+
+## `fp.Sender`
+
+Sender of a message.
+#### Fields:
+- `id` (`Optional[Identifier] = None`): An anonymized identifier representing the sender.
+- `name` (`Optional[str] = None`): The name of the sender.
+If sender is a bot, this will be the name of the bot.
+If sender is a user, this will be the name of the user if user name is available for this chat.
+Typically, user name is only available in a chat of multiple users. Please note that a user
+can change their name anytime and different users with different `id` can share the same name.
+
+
+
+---
+
+## `fp.User`
+
+User in a chat.
+#### Fields:
+- `id` (`Identifier`): An anonymized identifier representing a user.
+- `name` (`Optional[str] = None`): The name of the user if user name is available for this chat.
+Typically, user name is only available in a chat of multiple users. Please note that a user
+can change their name anytime and different users with different `id` can share the same name.
+
+
+
+---
+
+## `fp.MessageReaction`
+
+Reaction to a message.
+#### Fields:
+- `user_id` (`Identifier`): An anonymized identifier representing the
+user who reacted to the message.
+- `reaction` (`str`): The reaction to the message.
 
 
 
@@ -436,7 +482,7 @@ displayed text to the user and replace it with the provided text value.
 Similar to `PartialResponse`. Yield this to communicate errors from your bot.
 
 #### Fields:
-- `allow_retry` (`bool = False`): Whether or not to allow a user to retry on error.
+- `allow_retry` (`bool = True`): Whether or not to allow a user to retry on error.
 - `error_type` (`Optional[ErrorType] = None`): An enum indicating what error to display.
 
 

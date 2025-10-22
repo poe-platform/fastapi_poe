@@ -79,28 +79,83 @@ class Attachment(BaseModel):
     parsed_content: Optional[str] = None
 
 
+class MessageReaction(BaseModel):
+    """
+
+    Reaction to a message.
+    #### Fields:
+    - `user_id` (`Identifier`): An anonymized identifier representing the
+    user who reacted to the message.
+    - `reaction` (`str`): The reaction to the message.
+
+    """
+
+    user_id: Identifier
+    reaction: str
+
+
+class Sender(BaseModel):
+    """
+
+    Sender of a message.
+    #### Fields:
+    - `id` (`Optional[Identifier] = None`): An anonymized identifier representing the sender.
+    - `name` (`Optional[str] = None`): The name of the sender.
+    If sender is a bot, this will be the name of the bot.
+    If sender is a user, this will be the name of the user if user name is available for this chat.
+    Typically, user name is only available in a chat of multiple users. Please note that a user
+    can change their name anytime and different users with different `id` can share the same name.
+
+    """
+
+    id: Optional[Identifier] = None
+    name: Optional[str] = None
+
+
+class User(BaseModel):
+    """
+
+    User in a chat.
+    #### Fields:
+    - `id` (`Identifier`): An anonymized identifier representing a user.
+    - `name` (`Optional[str] = None`): The name of the user if user name is available for this chat.
+    Typically, user name is only available in a chat of multiple users. Please note that a user
+    can change their name anytime and different users with different `id` can share the same name.
+
+    """
+
+    id: Identifier
+    name: Optional[str] = None
+
+
 class ProtocolMessage(BaseModel):
     """
 
     A message as used in the Poe protocol.
     #### Fields:
-    - `role` (`Literal["system", "user", "bot", "tool"]`)
-    - `message_type` (`Optional[MessageType] = None`)
-    - `sender_id` (`Optional[str]`)
-    - `content` (`str`)
-    - `parameters` (`dict[str, Any] = {}`)
-    - `content_type` (`ContentType="text/markdown"`)
-    - `timestamp` (`int = 0`)
-    - `message_id` (`str = ""`)
-    - `feedback` (`list[MessageFeedback] = []`)
-    - `attachments` (`list[Attachment] = []`)
-    - `metadata` (`Optional[str] = None`)
+    - `role` (`Literal["system", "user", "bot", "tool"]`): Message sender role.
+    - `message_type` (`Optional[MessageType] = None`): Type of the message.
+    - `sender_id` (`Optional[str]`): Sender ID of the message. This is deprecated, use
+      `sender` instead.
+    - `sender` (`Optional[Sender] = None`): Sender of the message.
+    - `content` (`str`): Content of the message.
+    - `parameters` (`dict[str, Any] = {}`): Parameters for the message.
+    - `content_type` (`ContentType="text/markdown"`): Content type of the message.
+    - `timestamp` (`int = 0`): Timestamp of the message.
+    - `message_id` (`str = ""`): Message ID for the message.
+    - `feedback` (`list[MessageFeedback] = []`): Feedback for the message.
+    - `attachments` (`list[Attachment] = []`): Attachments for the message.
+    - `metadata` (`Optional[str] = None`): Metadata associated with the message.
+    - `referenced_message` (`Optional["ProtocolMessage"] = None`): Message referenced by
+      this message (if any).
+    - `reactions` (`list[MessageReaction] = []`): Reactions to the message.
 
     """
 
     role: Literal["system", "user", "bot", "tool"]
     message_type: Optional[MessageType] = None
     sender_id: Optional[str] = None
+    sender: Optional[Sender] = None
     content: str
     parameters: dict[str, Any] = {}
     content_type: ContentType = "text/markdown"
@@ -109,6 +164,8 @@ class ProtocolMessage(BaseModel):
     feedback: list[MessageFeedback] = Field(default_factory=list)
     attachments: list[Attachment] = Field(default_factory=list)
     metadata: Optional[str] = None
+    referenced_message: Optional["ProtocolMessage"] = None
+    reactions: list[MessageReaction] = Field(default_factory=list)
 
 
 class RequestContext(BaseModel):
@@ -148,6 +205,7 @@ class QueryRequest(BaseRequest):
     the identity of the calling bot
     - `language_code` (`str = "en"`): BCP 47 language code of the user's client.
     - `bot_query_id` (`str = ""`): an identifier representing a bot query.
+    - `users` (`list[User] = []`): list of users in the chat.
 
     """
 
@@ -165,6 +223,7 @@ class QueryRequest(BaseRequest):
     language_code: str = "en"
     adopt_current_bot_name: Optional[bool] = None
     bot_query_id: Identifier = ""
+    users: list[User] = []
 
 
 class SettingsRequest(BaseRequest):
