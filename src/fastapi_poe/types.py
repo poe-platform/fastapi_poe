@@ -201,6 +201,8 @@ class QueryRequest(BaseRequest):
     - `skip_system_prompt` (`bool = False`): Whether to use any system prompting or not.
     - `logit_bias` (`dict[str, float] = {}`)
     - `stop_sequences` (`list[str] = []`)
+    - `adopt_current_bot_name` (`Optional[bool] = None`): Makes the called bot adopt
+    the identity of the calling bot
     - `language_code` (`str = "en"`): BCP 47 language code of the user's client.
     - `bot_query_id` (`str = ""`): an identifier representing a bot query.
     - `users` (`list[User] = []`): list of users in the chat.
@@ -219,6 +221,7 @@ class QueryRequest(BaseRequest):
     logit_bias: dict[str, float] = {}
     stop_sequences: list[str] = []
     language_code: str = "en"
+    adopt_current_bot_name: Optional[bool] = None
     bot_query_id: Identifier = ""
     users: list[User] = []
 
