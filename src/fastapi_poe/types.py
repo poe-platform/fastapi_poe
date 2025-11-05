@@ -175,6 +175,101 @@ class RequestContext(BaseModel):
     http_request: Request
 
 
+class ToolDefinition(BaseModel):
+    """
+
+    An object representing a tool definition used for OpenAI function calling.
+    #### Fields:
+    - `type` (`str`)
+    - `function` (`FunctionDefinition`): Look at the source code for a detailed description
+    of what this means.
+
+    """
+
+    class FunctionDefinition(BaseModel):
+        class ParametersDefinition(BaseModel):
+            type: str
+            properties: dict[str, object]
+            required: Optional[list[str]] = None
+
+        name: str
+        description: str
+        parameters: ParametersDefinition
+
+    type: str
+    function: FunctionDefinition
+
+
+class ToolCallDefinition(BaseModel):
+    """
+
+    An object representing a tool call. This is returned as a response by the model when using
+    OpenAI function calling.
+    #### Fields:
+    - `id` (`str`)
+    - `type` (`str`)
+    - `function` (`FunctionDefinition`): The function name (string) and arguments (JSON string).
+
+    """
+
+    class FunctionDefinition(BaseModel):
+        name: str
+        arguments: str
+
+    id: str
+    type: str
+    function: FunctionDefinition
+
+
+class ToolResultDefinition(BaseModel):
+    """
+
+    An object representing a function result. This is passed to the model in the last step
+    when using OpenAI function calling.
+    #### Fields:
+    - `role` (`str`)
+    - `name` (`str`)
+    - `tool_call_id` (`str`)
+    - `content` (`str`)
+
+    """
+
+    role: str
+    name: str
+    tool_call_id: str
+    content: str
+
+
+class ToolCallDefinitionDelta(BaseModel):
+    """
+
+    An object representing a tool call chunk. This is returned as a streamed response by the model
+    when using OpenAI function calling. This may be an incomplete tool call definition (e.g. with
+    the function name set with the arguments not yet filled in), so the index can be used to
+    identify which tool call this chunk belongs to. Chunks may have null id, type, and
+    function.name values.
+    See https://platform.openai.com/docs/guides/function-calling#streaming for examples.
+    #### Fields:
+    - `index` (`int`): used to identify to which tool call this chunk belongs.
+    - `id` (`Optional[str] = None`): The tool call ID. This helps the model identify previous tool
+    call suggestions and help optimize tool call loops.
+    - `type` (`Optional[str] = None`): The type of the tool call (always function for function
+    calls).
+    - `function` (`FunctionDefinitionDelta`): The function name (string) and arguments (JSON
+    string).
+
+    """
+
+    class FunctionDefinitionDelta(BaseModel):
+        name: Optional[str] = None
+        arguments: str
+
+    index: int = 0
+    id: Optional[str] = None
+    type: Optional[str] = None
+    function: FunctionDefinitionDelta
+
+
 class BaseRequest(BaseModel):
     """Common data for all requests."""
 
@@ -206,6 +301,16 @@ class QueryRequest(BaseRequest):
     - `language_code` (`str = "en"`): BCP 47 language code of the user's client.
     - `bot_query_id` (`str = ""`): an identifier representing a bot query.
     - `users` (`list[User] = []`): list of users in the chat.
+    - `tools` (`Optional[list[ToolDefinition]] = None`): List of tool definitions for
+    function calling.
+    - `tool_calls` (`Optional[list[ToolCallDefinition]] = None`): List of tool calls
+    made by the assistant.
+    - `tool_results` (`Optional[list[ToolResultDefinition]] = None`): List of tool
+    execution results.
+    - `query_creation_time` (`Optional[int] = None`): Timestamp when the query was
+    created (microseconds).
+    - `extra_params` (`Optional[dict[str, Any]] = None`): Additional parameters for
+    the request.
 
     """
 
@@ -224,6 +329,38 @@ class QueryRequest(BaseRequest):
     adopt_current_bot_name: Optional[bool] = None
     bot_query_id: Identifier = ""
     users: list[User] = []
+    # Fields below are for compatibility with aiohttp_poe.types.QueryRequest
+    tools: Optional[list[ToolDefinition]] = None
+    tool_calls: Optional[list[ToolCallDefinition]] = None
+    tool_results: Optional[list[ToolResultDefinition]] = None
+    query_creation_time: Optional[int] = None
+    extra_params: Optional[dict[str, Any]] = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "QueryRequest":
+        """Create QueryRequest from a dictionary (e.g., from aiohttp_poe format)."""
+        # Convert tool definitions if present
+        if "tools" in data and data["tools"] is not None:
+            data["tools"] = [
+                ToolDefinition.model_validate(tool) if isinstance(tool, dict) else tool
+                for tool in data["tools"]
+            ]
+
+        # Convert tool calls if present
+        if "tool_calls" in data and data["tool_calls"] is not None:
+            data["tool_calls"] = [
+                ToolCallDefinition.model_validate(tc) if isinstance(tc, dict) else tc
+                for tc in data["tool_calls"]
+            ]
+
+        # Convert tool results if present
+        if "tool_results" in data and data["tool_results"] is not None:
+            data["tool_results"] = [
+                ToolResultDefinition.model_validate(tr) if isinstance(tr, dict) else tr
+                for tr in data["tool_results"]
+            ]
+
+        return cls.model_validate(data)
 
 
 class SettingsRequest(BaseRequest):
@@ -233,6 +370,15 @@ class SettingsRequest(BaseRequest):
     might get updated in the future.
 
     """
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "SettingsRequest":
+        """Create SettingsRequest from a dictionary (e.g., from aiohttp_poe format)."""
+        if "version" not in data:
+            data["version"] = "1.0"
+        if "type" not in data:
+            data["type"] = "settings"
+        return cls.model_validate(data)
 
 
 class ReportFeedbackRequest(BaseRequest):
@@ -252,6 +398,15 @@ class ReportFeedbackRequest(BaseRequest):
     conversation_id: Identifier
     feedback_type: FeedbackType
 
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "ReportFeedbackRequest":
+        """Create ReportFeedbackRequest from a dictionary (e.g., from aiohttp_poe format)."""
+        if "version" not in data:
+            data["version"] = "1.0"
+        if "type" not in data:
+            data["type"] = "report_feedback"
+        return cls.model_validate(data)
+
 
 class ReportReactionRequest(BaseRequest):
     """
@@ -270,6 +425,15 @@ class ReportReactionRequest(BaseRequest):
     conversation_id: Identifier
     reaction: str
 
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "ReportReactionRequest":
+        """Create ReportReactionRequest from a dictionary (e.g., from aiohttp_poe format)."""
+        if "version" not in data:
+            data["version"] = "1.0"
+        if "type" not in data:
+            data["type"] = "report_reaction"
+        return cls.model_validate(data)
+
 
 class ReportErrorRequest(BaseRequest):
     """
@@ -283,6 +447,15 @@ class ReportErrorRequest(BaseRequest):
 
     message: str
     metadata: dict[str, Any]
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "ReportErrorRequest":
+        """Create ReportErrorRequest from a dictionary (e.g., from aiohttp_poe format)"""
+        if "version" not in data:
+            data["version"] = "1.0"
+        if "type" not in data:
+            data["type"] = "report_error"
+        return cls.model_validate(data)
 
 
 Number = Union[int, float]
@@ -442,101 +615,6 @@ class ParameterControls(BaseModel):
 
     api_version: Literal["2"] = "2"
     sections: list[Section]
-
-
-class ToolDefinition(BaseModel):
-    """
-
-    An object representing a tool definition used for OpenAI function calling.
-    #### Fields:
-    - `type` (`str`)
-    - `function` (`FunctionDefinition`): Look at the source code for a detailed description
-    of what this means.
-
-    """
-
-    class FunctionDefinition(BaseModel):
-        class ParametersDefinition(BaseModel):
-            type: str
-            properties: dict[str, object]
-            required: Optional[list[str]] = None
-
-        name: str
-        description: str
-        parameters: ParametersDefinition
-
-    type: str
-    function: FunctionDefinition
-
-
-class ToolCallDefinition(BaseModel):
-    """
-
-    An object representing a tool call. This is returned as a response by the model when using
-    OpenAI function calling.
-    #### Fields:
-    - `id` (`str`)
-    - `type` (`str`)
-    - `function` (`FunctionDefinition`): The function name (string) and arguments (JSON string).
-
-    """
-
-    class FunctionDefinition(BaseModel):
-        name: str
-        arguments: str
-
-    id: str
-    type: str
-    function: FunctionDefinition
-
-
-class ToolCallDefinitionDelta(BaseModel):
-    """
-
-    An object representing a tool call chunk. This is returned as a streamed response by the model
-    when using OpenAI function calling. This may be an incomplete tool call definition (e.g. with
-    the function name set with the arguments not yet filled in), so the index can be used to
-    identify which tool call this chunk belongs to. Chunks may have null id, type, and
-    function.name values.
-    See https://platform.openai.com/docs/guides/function-calling#streaming for examples.
-    #### Fields:
-    - `index` (`int`): used to identify to which tool call this chunk belongs.
-    - `id` (`Optional[str] = None`): The tool call ID. This helps the model identify previous tool
-    call suggestions and help optimize tool call loops.
-    - `type` (`Optional[str] = None`): The type of the tool call (always function for function
-    calls).
-    - `function` (`FunctionDefinitionDelta`): The function name (string) and arguments (JSON
-    string).
-
-    """
-
-    class FunctionDefinitionDelta(BaseModel):
-        name: Optional[str] = None
-        arguments: str
-
-    index: int = 0
-    id: Optional[str] = None
-    type: Optional[str] = None
-    function: FunctionDefinitionDelta
-
-
-class ToolResultDefinition(BaseModel):
-    """
-
-    An object representing a function result. This is passed to the model in the last step
-    when using OpenAI function calling.
-    #### Fields:
-    - `role` (`str`)
-    - `name` (`str`)
-    - `tool_call_id` (`str`)
-    - `content` (`str`)
-
-    """
-
-    role: str
-    name: str
-    tool_call_id: str
-    content: str
 
 
 class SettingsResponse(BaseModel):
