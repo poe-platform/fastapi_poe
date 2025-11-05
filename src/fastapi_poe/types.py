@@ -776,11 +776,6 @@ class PartialResponse(BaseModel):
     index: Optional[int] = None
     """If a bot supports multiple responses, this is the index of the response to be updated."""
 
-    @classmethod
-    def from_dict(cls, data: dict[str, object]) -> "PartialResponse":
-        """Create a PartialResponse from a dictionary (for aiohttp_poe TextEvent)."""
-        return cls(text=str(data.get("text", "")))
-
 
 class ErrorResponse(PartialResponse):
     """
@@ -796,17 +791,6 @@ class ErrorResponse(PartialResponse):
     allow_retry: bool = True
     error_type: Optional[ErrorType] = None
 
-    @classmethod
-    def from_dict(cls, data: dict[str, object]) -> "ErrorResponse":
-        """Create an ErrorResponse from a dictionary (for aiohttp_poe ErrorEvent)."""
-        text = data.get("text", "")
-        allow_retry = data.get("allow_retry", True)
-        error_type_raw = data.get("error_type")
-        error_type: Optional[ErrorType] = None
-        if isinstance(error_type_raw, str) and error_type_raw in get_args(ErrorType):
-            error_type = cast(ErrorType, error_type_raw)
-
-        return cls(text=str(text), allow_retry=bool(allow_retry), error_type=error_type)
 
 
 class MetaResponse(PartialResponse):
