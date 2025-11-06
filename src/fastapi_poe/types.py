@@ -1,5 +1,5 @@
 import math
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, cast, get_args
 
 from fastapi import Request
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -589,10 +589,13 @@ class SettingsResponse(BaseModel):
 class AttachmentUploadResponse(BaseModel):
     """
 
-    The result of a post_message_attachment request.
+    The result of a post_message_attachment request or file event in bot response.
     #### Fields:
     - `attachment_url` (`Optional[str]`): The URL of the attachment.
     - `mime_type` (`Optional[str]`): The MIME type of the attachment.
+    - `name` (`Optional[str]`): The name of the attachment. Only populated when
+    the attachment originates from a file event in bot response, not from
+    post_message_attachment.
     - `inline_ref` (`Optional[str]`): The inline reference of the attachment.
     if post_message_attachment is called with is_inline=False, this will be None.
 
@@ -600,7 +603,18 @@ class AttachmentUploadResponse(BaseModel):
 
     attachment_url: Optional[str]
     mime_type: Optional[str]
+    name: Optional[str] = None
     inline_ref: Optional[str]
+
+    @classmethod
+    def from_dict(cls, data: dict[str, object]) -> "AttachmentUploadResponse":
+        """Create an AttachmentUploadResponse from a dictionary (for aiohttp_poe FileEvent)."""
+        return cls(
+            attachment_url=data.get("url"),  # type: ignore
+            mime_type=data.get("content_type"),  # type: ignore
+            name=data.get("name"),  # type: ignore
+            inline_ref=data.get("inline_ref"),  # type: ignore
+        )
 
 
 class AttachmentHttpResponse(BaseModel):
@@ -684,6 +698,11 @@ class PartialResponse(BaseModel):
     index: Optional[int] = None
     """If a bot supports multiple responses, this is the index of the response to be updated."""
 
+    @classmethod
+    def from_dict(cls, data: dict[str, object]) -> "PartialResponse":
+        """Create a PartialResponse from a dictionary (for aiohttp_poe TextEvent)."""
+        return cls(text=str(data.get("text", "")))
+
 
 class ErrorResponse(PartialResponse):
     """
@@ -698,6 +717,18 @@ class ErrorResponse(PartialResponse):
 
     allow_retry: bool = True
     error_type: Optional[ErrorType] = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, object]) -> "ErrorResponse":
+        """Create an ErrorResponse from a dictionary (for aiohttp_poe ErrorEvent)."""
+        text = data.get("text", "")
+        allow_retry = data.get("allow_retry", True)
+        error_type_raw = data.get("error_type")
+        error_type: Optional[ErrorType] = None
+        if isinstance(error_type_raw, str) and error_type_raw in get_args(ErrorType):
+            error_type = cast(ErrorType, error_type_raw)
+
+        return cls(text=str(text), allow_retry=bool(allow_retry), error_type=error_type)
 
 
 class MetaResponse(PartialResponse):
