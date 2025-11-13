@@ -24,6 +24,7 @@ from fastapi_poe.sync_utils import run_sync
 from .types import (
     Attachment,
     ContentType,
+    FunctionCallDefinition,
     Identifier,
     ProtocolMessage,
     QueryRequest,
@@ -551,7 +552,7 @@ async def _stream_request_with_tools(
                     aggregated_tool_calls[tool_call_delta.index] = ToolCallDefinition(
                         id=tool_call_delta.id,
                         type=tool_call_delta.type,
-                        function=ToolCallDefinition.FunctionDefinition(
+                        function=FunctionCallDefinition(
                             name=tool_call_delta.function.name,
                             arguments=tool_call_delta.function.arguments,
                         ),
