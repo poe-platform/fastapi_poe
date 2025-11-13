@@ -1192,3 +1192,38 @@ async def test_upload_file_error_raises() -> None:
         pytest.raises(AttachmentUploadError),
     ):
         await upload_file(file_url="https://example.com/file.txt", api_key="secret-key")
+
+
+@pytest.mark.asyncio
+async def test_upload_file_with_extra_headers() -> None:
+    expected_json = {
+        "attachment_url": "https://cdn.example.com/fake-id/file.txt",
+        "mime_type": "text/plain",
+    }
+
+    async def fake_send(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            status_code=200,
+            content=json.dumps(expected_json).encode(),
+            headers={"content-type": "application/json"},
+        )
+
+    mock_client = _make_mock_async_client(fake_send)
+    with patch("httpx.AsyncClient", return_value=mock_client):
+        attachment = await upload_file(
+            file_url="https://example.com/file.txt",
+            file_name="file.txt",
+            api_key="secret-key",
+            extra_headers={"X-Custom-Header": "custom-value"},
+        )
+
+    # Attachment object
+    assert attachment.url == expected_json["attachment_url"]
+    assert attachment.content_type == expected_json["mime_type"]
+    assert attachment.name == "file.txt"
+
+    # HTTP request should include both auth and custom headers
+    send_mock: AsyncMock = cast(AsyncMock, mock_client.send)
+    req: httpx.Request = send_mock.call_args.args[0]
+    assert req.headers["Authorization"] == "secret-key"
+    assert req.headers["X-Custom-Header"] == "custom-value"

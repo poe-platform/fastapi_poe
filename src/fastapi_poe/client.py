@@ -906,6 +906,7 @@ async def upload_file(
     num_tries: int = 2,
     retry_sleep_time: float = 0.5,
     base_url: str = "https://www.quora.com/poe_api/",
+    extra_headers: Optional[dict[str, str]] = None,
 ) -> Attachment:
     """
     Upload a file (raw bytes *or* via URL) to Poe and receive an Attachment
@@ -948,6 +949,8 @@ async def upload_file(
 
     async def _do_upload(_session: httpx.AsyncClient) -> Attachment:
         headers = {"Authorization": api_key}
+        if extra_headers is not None:
+            headers.update(extra_headers)
 
         if file_url:
             data: dict[str, str] = {"download_url": file_url}
@@ -1016,6 +1019,7 @@ def upload_file_sync(
     num_tries: int = 2,
     retry_sleep_time: float = 0.5,
     base_url: str = "https://www.quora.com/poe_api/",
+    extra_headers: Optional[dict[str, str]] = None,
 ) -> Attachment:
     """
     This is a synchronous wrapper around the async `upload_file`.
@@ -1031,5 +1035,6 @@ def upload_file_sync(
         num_tries=num_tries,
         retry_sleep_time=retry_sleep_time,
         base_url=base_url,
+        extra_headers=extra_headers,
     )
     return run_sync(coro, session=session)
