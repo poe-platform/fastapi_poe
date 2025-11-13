@@ -4,10 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "fastapi_poe"
-version = "0.0.75"
+version = "0.0.77"
 authors = [
-  { name="Lida Li", email="lli@quora.com" },
-  { name="Jelle Zijlstra", email="jelle@quora.com" },
   { name="Yusheng Ding", email="yding@quora.com" },
   { name="Kris Yang", email="kryang@quora.com" },
   { name="John Li", email="jli@quora.com" },
