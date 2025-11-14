@@ -20,9 +20,8 @@ from fastapi_poe.client import (
     sync_bot_settings,
     upload_file,
 )
-from fastapi_poe.types import MetaResponse as MetaMessage
-from fastapi_poe.types import PartialResponse as BotMessage
 from fastapi_poe.types import (
+    FunctionCallDefinition,
     ProtocolMessage,
     QueryRequest,
     Sender,
@@ -30,6 +29,8 @@ from fastapi_poe.types import (
     ToolDefinition,
     ToolResultDefinition,
 )
+from fastapi_poe.types import MetaResponse as MetaMessage
+from fastapi_poe.types import PartialResponse as BotMessage
 from sse_starlette import ServerSentEvent
 
 
@@ -364,7 +365,7 @@ class TestStreamRequest:
                         aggregated_tool_calls[tool_call.index] = ToolCallDefinition(
                             id=tool_call.id or "",
                             type=tool_call.type or "",
-                            function=ToolCallDefinition.FunctionDefinition(
+                            function=FunctionCallDefinition(
                                 name=tool_call.function.name or "",
                                 arguments=tool_call.function.arguments,
                             ),
@@ -378,7 +379,7 @@ class TestStreamRequest:
             ToolCallDefinition(
                 id="call_123",
                 type="function",
-                function=ToolCallDefinition.FunctionDefinition(
+                function=FunctionCallDefinition(
                     name="get_current_weather",
                     arguments='{"location":"San Francisco, CA"}',
                 ),
@@ -386,7 +387,7 @@ class TestStreamRequest:
             ToolCallDefinition(
                 id="call_456",
                 type="function",
-                function=ToolCallDefinition.FunctionDefinition(
+                function=FunctionCallDefinition(
                     name="get_current_mayor", arguments='{"location":"Tokyo, JP"}'
                 ),
             ),
@@ -455,7 +456,7 @@ class TestStreamRequest:
             ToolCallDefinition(
                 id="call_123",
                 type="function",
-                function=ToolCallDefinition.FunctionDefinition(
+                function=FunctionCallDefinition(
                     name="get_current_weather",
                     arguments='{"location":"San Francisco, CA"}',
                 ),
@@ -463,7 +464,7 @@ class TestStreamRequest:
             ToolCallDefinition(
                 id="call_456",
                 type="function",
-                function=ToolCallDefinition.FunctionDefinition(
+                function=FunctionCallDefinition(
                     name="get_current_mayor", arguments='{"location":"Tokyo, JP"}'
                 ),
             ),
@@ -517,7 +518,7 @@ class TestStreamRequest:
             ToolCallDefinition(
                 id="call_456",
                 type="function",
-                function=ToolCallDefinition.FunctionDefinition(
+                function=FunctionCallDefinition(
                     name="get_current_mayor", arguments='{"location":"Tokyo, JP"}'
                 ),
             )
