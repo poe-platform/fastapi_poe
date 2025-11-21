@@ -645,8 +645,8 @@ class SettingsResponse(BaseModel):
     - `enforce_author_role_alternation` (`bool = False`): If enabled, Poe will concatenate messages
     so that they follow role alternation, which is a requirement for certain LLM providers like
     Anthropic.
-     - `enable_multi_bot_chat_prompting` (`bool = True`): If enabled, Poe will combine previous bot
-     messages if there is a multibot context.
+    - `enable_multi_entity_prompting` (`bool = True`): If enabled, Poe will combine previous bot
+    messages if there is a multientity context.
     - `parameter_controls` (`Optional[ParameterControls] = None`): Optional JSON object that defines
     interactive parameter controls. The object must contain an api_version and sections array.
 
@@ -664,7 +664,8 @@ class SettingsResponse(BaseModel):
     expand_text_attachments: Optional[bool] = None
     enable_image_comprehension: Optional[bool] = None
     enforce_author_role_alternation: Optional[bool] = None
-    enable_multi_bot_chat_prompting: Optional[bool] = None
+    enable_multi_bot_chat_prompting: Optional[bool] = None  # deprecated
+    enable_multi_entity_prompting: Optional[bool] = None
     rate_card: Optional[str] = None
     cost_label: Optional[str] = None
     parameter_controls: Optional[ParameterControls] = None
