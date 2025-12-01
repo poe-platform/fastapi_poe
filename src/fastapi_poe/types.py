@@ -222,6 +222,16 @@ class ToolDefinition(BaseModel):
     function: FunctionDefinition
 
 
+class CustomToolDefinition(BaseModel):
+    """Custom tool definition for OpenAI-compatible custom tools."""
+
+    name: str
+    description: str
+    format_: dict[str, Any] = Field(alias="format")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
 class FunctionCallDefinition(BaseModel):
     """
 
@@ -251,6 +261,15 @@ class ToolCallDefinition(BaseModel):
     id: str
     type: str
     function: FunctionCallDefinition
+
+
+class CustomToolCallDefinition(BaseModel):
+    """Custom tool call in model response."""
+
+    name: str
+    input_: str = Field(alias="input")
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class ToolResultDefinition(BaseModel):

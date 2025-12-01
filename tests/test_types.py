@@ -2,6 +2,8 @@ import pydantic
 import pytest
 from fastapi_poe.types import (
     CostItem,
+    CustomToolCallDefinition,
+    CustomToolDefinition,
     MessageReaction,
     PartialResponse,
     ProtocolMessage,
@@ -229,3 +231,134 @@ class TestQueryRequest:
         )
         assert len(query_request.query[0].reactions) == 1
         assert query_request.query[0].reactions[0].reaction == "like"
+
+
+class TestCustomToolDefinition:
+
+    def test_basic_instantiation(self) -> None:
+        """Test creating CustomToolDefinition with alias 'format'"""
+        tool = CustomToolDefinition(
+            name="my_tool",
+            description="A custom tool",
+            format={"type": "object", "properties": {}},
+        )
+        assert tool.name == "my_tool"
+        assert tool.description == "A custom tool"
+        assert tool.format_ == {"type": "object", "properties": {}}
+
+    def test_field_name_works_with_populate_by_name(self) -> None:
+        """Test that 'format_' field name also works due to populate_by_name=True"""
+        tool = CustomToolDefinition(
+            name="my_tool",
+            description="A custom tool",
+            format_={"type": "string"},  # type: ignore
+        )
+        assert tool.format_ == {"type": "string"}
+
+    def test_requires_all_fields(self) -> None:
+        """Test that all required fields are validated"""
+        with pytest.raises(pydantic.ValidationError):
+            CustomToolDefinition(name="my_tool")  # type: ignore
+
+        with pytest.raises(pydantic.ValidationError):
+            CustomToolDefinition(description="desc", format={})  # type: ignore
+
+    def test_serialization_uses_alias(self) -> None:
+        """Test that serialization uses 'format' not 'format_'"""
+        tool = CustomToolDefinition(
+            name="my_tool", description="desc", format={"key": "value"}
+        )
+        data = tool.model_dump(by_alias=True)
+        assert "format" in data
+        assert "format_" not in data
+        assert data["format"] == {"key": "value"}
+
+    def test_serialization_without_alias(self) -> None:
+        """Test that serialization without by_alias uses 'format_'"""
+        tool = CustomToolDefinition(
+            name="my_tool", description="desc", format={"key": "value"}
+        )
+        data = tool.model_dump(by_alias=False)
+        assert "format_" in data
+        assert "format" not in data
+        assert data["format_"] == {"key": "value"}
+
+    def test_json_serialization(self) -> None:
+        """Test JSON serialization with alias"""
+        tool = CustomToolDefinition(
+            name="tool", description="desc", format={"nested": "data"}
+        )
+        json_str = tool.model_dump_json(by_alias=True)
+        assert '"format"' in json_str
+        assert '"format_"' not in json_str
+
+    def test_deserialization_from_json(self) -> None:
+        """Test deserializing from JSON with alias"""
+        json_data = {
+            "name": "tool1",
+            "description": "A tool",
+            "format": {"type": "array"},
+        }
+        tool = CustomToolDefinition(**json_data)
+        assert tool.name == "tool1"
+        assert tool.format_ == {"type": "array"}
+
+    def test_invalid_type_for_format(self) -> None:
+        """Test that format must be a dict"""
+        with pytest.raises(pydantic.ValidationError):
+            CustomToolDefinition(name="tool", description="desc", format="not a dict")  # type: ignore
+
+
+class TestCustomToolCallDefinition:
+
+    def test_basic_instantiation(self) -> None:
+        """Test creating CustomToolCallDefinition with alias 'input'"""
+        call = CustomToolCallDefinition(name="my_tool", input='{"arg": "value"}')
+        assert call.name == "my_tool"
+        assert call.input_ == '{"arg": "value"}'
+
+    def test_field_name_works_with_populate_by_name(self) -> None:
+        """Test that 'input_' field name also works due to populate_by_name=True"""
+        call = CustomToolCallDefinition(name="my_tool", input_='{"data": 123}')  # type: ignore
+        assert call.input_ == '{"data": 123}'
+
+    def test_requires_all_fields(self) -> None:
+        """Test that all required fields are validated"""
+        with pytest.raises(pydantic.ValidationError):
+            CustomToolCallDefinition(name="my_tool")  # type: ignore
+
+        with pytest.raises(pydantic.ValidationError):
+            CustomToolCallDefinition(input="data")  # type: ignore
+
+    def test_serialization_uses_alias(self) -> None:
+        """Test that serialization uses 'input' not 'input_'"""
+        call = CustomToolCallDefinition(name="tool1", input="test_input")
+        data = call.model_dump(by_alias=True)
+        assert "input" in data
+        assert "input_" not in data
+        assert data["input"] == "test_input"
+
+    def test_serialization_without_alias(self) -> None:
+        """Test that serialization without by_alias uses 'input_'"""
+        call = CustomToolCallDefinition(name="tool1", input="test_input")
+        data = call.model_dump(by_alias=False)
+        assert "input_" in data
+        assert "input" not in data
+        assert data["input_"] == "test_input"
+
+    def test_json_serialization(self) -> None:
+        """Test JSON serialization with alias"""
+        call = CustomToolCallDefinition(name="calculator", input='{"operation": "add"}')
+        json_str = call.model_dump_json(by_alias=True)
+        assert '"input"' in json_str
+        assert '"input_"' not in json_str
+
+    def test_deserialization_from_json(self) -> None:
+        """Test deserializing from JSON with alias"""
+        json_data = {
+            "name": "calculator",
+            "input": '{"operation": "add", "a": 1, "b": 2}',
+        }
+        call = CustomToolCallDefinition(**json_data)
+        assert call.name == "calculator"
+        assert call.input_ == '{"operation": "add", "a": 1, "b": 2}'
