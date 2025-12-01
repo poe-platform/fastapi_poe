@@ -303,6 +303,11 @@ class TestCustomToolDefinition:
         assert tool.name == "tool1"
         assert tool.format_ == {"type": "array"}
 
+    def test_invalid_type_for_format(self) -> None:
+        """Test that format must be a dict"""
+        with pytest.raises(pydantic.ValidationError):
+            CustomToolDefinition(name="tool", description="desc", format="not a dict")  # type: ignore
+
 
 class TestCustomToolCallDefinition:
 
