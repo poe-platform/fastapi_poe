@@ -2,7 +2,7 @@ import pydantic
 import pytest
 from fastapi_poe.types import (
     CostItem,
-    CustomToolCallDefinition,
+    CustomCallDefinition,
     CustomToolDefinition,
     MessageReaction,
     PartialResponse,
@@ -255,13 +255,31 @@ class TestCustomToolDefinition:
         )
         assert tool.format_ == {"type": "string"}
 
-    def test_requires_all_fields(self) -> None:
-        """Test that all required fields are validated"""
+    def test_requires_name_field(self) -> None:
+        """Test that name field is required"""
         with pytest.raises(pydantic.ValidationError):
-            CustomToolDefinition(name="my_tool")  # type: ignore
+            CustomToolDefinition()  # type: ignore
 
-        with pytest.raises(pydantic.ValidationError):
-            CustomToolDefinition(description="desc", format={})  # type: ignore
+    def test_optional_fields(self) -> None:
+        """Test that description and format are optional"""
+        tool = CustomToolDefinition(name="my_tool")
+        assert tool.name == "my_tool"
+        assert tool.description is None
+        assert tool.format_ is None
+
+    def test_with_only_name_and_description(self) -> None:
+        """Test with only name and description"""
+        tool = CustomToolDefinition(name="tool", description="desc")
+        assert tool.name == "tool"
+        assert tool.description == "desc"
+        assert tool.format_ is None
+
+    def test_with_only_name_and_format(self) -> None:
+        """Test with only name and format"""
+        tool = CustomToolDefinition(name="tool", format={"type": "string"})
+        assert tool.name == "tool"
+        assert tool.description is None
+        assert tool.format_ == {"type": "string"}
 
     def test_serialization_uses_alias(self) -> None:
         """Test that serialization uses 'format' not 'format_'"""
@@ -309,30 +327,30 @@ class TestCustomToolDefinition:
             CustomToolDefinition(name="tool", description="desc", format="not a dict")  # type: ignore
 
 
-class TestCustomToolCallDefinition:
+class TestCustomCallDefinition:
 
     def test_basic_instantiation(self) -> None:
-        """Test creating CustomToolCallDefinition with alias 'input'"""
-        call = CustomToolCallDefinition(name="my_tool", input='{"arg": "value"}')
+        """Test creating CustomCallDefinition with alias 'input'"""
+        call = CustomCallDefinition(name="my_tool", input='{"arg": "value"}')
         assert call.name == "my_tool"
         assert call.input_ == '{"arg": "value"}'
 
     def test_field_name_works_with_populate_by_name(self) -> None:
         """Test that 'input_' field name also works due to populate_by_name=True"""
-        call = CustomToolCallDefinition(name="my_tool", input_='{"data": 123}')  # type: ignore
+        call = CustomCallDefinition(name="my_tool", input_='{"data": 123}')  # type: ignore
         assert call.input_ == '{"data": 123}'
 
     def test_requires_all_fields(self) -> None:
         """Test that all required fields are validated"""
         with pytest.raises(pydantic.ValidationError):
-            CustomToolCallDefinition(name="my_tool")  # type: ignore
+            CustomCallDefinition(name="my_tool")  # type: ignore
 
         with pytest.raises(pydantic.ValidationError):
-            CustomToolCallDefinition(input="data")  # type: ignore
+            CustomCallDefinition(input="data")  # type: ignore
 
     def test_serialization_uses_alias(self) -> None:
         """Test that serialization uses 'input' not 'input_'"""
-        call = CustomToolCallDefinition(name="tool1", input="test_input")
+        call = CustomCallDefinition(name="tool1", input="test_input")
         data = call.model_dump(by_alias=True)
         assert "input" in data
         assert "input_" not in data
@@ -340,7 +358,7 @@ class TestCustomToolCallDefinition:
 
     def test_serialization_without_alias(self) -> None:
         """Test that serialization without by_alias uses 'input_'"""
-        call = CustomToolCallDefinition(name="tool1", input="test_input")
+        call = CustomCallDefinition(name="tool1", input="test_input")
         data = call.model_dump(by_alias=False)
         assert "input_" in data
         assert "input" not in data
@@ -348,7 +366,7 @@ class TestCustomToolCallDefinition:
 
     def test_json_serialization(self) -> None:
         """Test JSON serialization with alias"""
-        call = CustomToolCallDefinition(name="calculator", input='{"operation": "add"}')
+        call = CustomCallDefinition(name="calculator", input='{"operation": "add"}')
         json_str = call.model_dump_json(by_alias=True)
         assert '"input"' in json_str
         assert '"input_"' not in json_str
@@ -359,6 +377,6 @@ class TestCustomToolCallDefinition:
             "name": "calculator",
             "input": '{"operation": "add", "a": 1, "b": 2}',
         }
-        call = CustomToolCallDefinition(**json_data)
+        call = CustomCallDefinition(**json_data)
         assert call.name == "calculator"
         assert call.input_ == '{"operation": "add", "a": 1, "b": 2}'
