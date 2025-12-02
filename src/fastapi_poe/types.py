@@ -223,11 +223,16 @@ class ToolDefinition(BaseModel):
 
 
 class CustomToolDefinition(BaseModel):
-    """Custom tool definition for OpenAI-compatible custom tools."""
+    """Custom tool definition for OpenAI-compatible custom tools.
+
+    Corresponds to `chat_completion_custom_tool_param.Custom` but
+    with a looser format specification.
+
+    """
 
     name: str
-    description: str
-    format_: dict[str, Any] = Field(alias="format")
+    description: Optional[str] = None
+    format_: Optional[dict[str, Any]] = Field(default=None, alias="format")
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -263,8 +268,12 @@ class ToolCallDefinition(BaseModel):
     function: FunctionCallDefinition
 
 
-class CustomToolCallDefinition(BaseModel):
-    """Custom tool call in model response."""
+class CustomCallDefinition(BaseModel):
+    """Custom tool call in model response.
+
+    Corresponds to `chat_completion_message_custom_tool_call.Custom`.
+
+    """
 
     name: str
     input_: str = Field(alias="input")
