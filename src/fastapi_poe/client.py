@@ -534,7 +534,9 @@ async def _stream_request_with_tools(
             # If tool_executables is not set, return the tool calls without executing them,
             # allowing the caller to manage the tool call loop.
             if tool_executables is None:
-                yield BotMessage(text="", tool_calls=tool_call_deltas)
+                yield BotMessage(
+                    text="", tool_calls=tool_call_deltas, index=message.index
+                )
                 continue
 
             for tool_call_delta in tool_call_deltas:
@@ -564,7 +566,9 @@ async def _stream_request_with_tools(
 
         # if no tool calls are selected, the deltas contain content instead of tool_calls
         elif "content" in message.data["choices"][0]["delta"]:
-            yield BotMessage(text=message.data["choices"][0]["delta"]["content"])
+            yield BotMessage(
+                text=message.data["choices"][0]["delta"]["content"], index=message.index
+            )
 
     # If tool_executables is not set, exit early since there are no functions to execute.
     if not tool_executables:
