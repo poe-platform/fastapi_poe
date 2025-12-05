@@ -560,6 +560,47 @@ class TestStreamRequest:
         # we should not make a second request if no tools are selected
         assert mock_perform_query_request_with_tools.call_count == 1
 
+    @patch("fastapi_poe.client._BotContext.perform_query_request")
+    async def test_stream_request_with_tools_index_preserved(
+        self,
+        mock_perform_query_request_with_tools: Mock,
+        mock_request: QueryRequest,
+        tool_definitions_and_executables: tuple[list[ToolDefinition], list[Callable]],
+    ) -> None:
+        """Test that index is preserved when yielding tool call responses."""
+
+        async def mock_response_with_index() -> AsyncGenerator[BotMessage, None]:
+            mock_delta = {
+                "tool_calls": [
+                    {
+                        "index": 0,
+                        "id": "call_123",
+                        "type": "function",
+                        "function": {"name": "get_current_weather", "arguments": ""},
+                    }
+                ]
+            }
+            mock_response = self._create_mock_openai_response(mock_delta)
+            message_with_index = BotMessage(text="", data=mock_response, index=1)
+            yield message_with_index
+            mock_response["choices"][0]["finish_reason"] = "tool_calls"
+            yield BotMessage(text="", data=mock_response, index=1)
+
+        mock_perform_query_request_with_tools.side_effect = [mock_response_with_index()]
+        tools, _ = tool_definitions_and_executables
+
+        messages_with_tool_calls = []
+        async for message in stream_request(mock_request, "test_bot", tools=tools):
+            if message.tool_calls:
+                messages_with_tool_calls.append(message)
+
+        assert len(messages_with_tool_calls) > 0
+        # The index should be preserved from the incoming message
+        # If the incoming message has index=1, the tool call message should also have index=1
+        assert (
+            messages_with_tool_calls[0].index == 1
+        ), f"Expected index=1, got {messages_with_tool_calls[0].index}"
+
 
 @pytest.mark.asyncio
 class Test_BotContext:
