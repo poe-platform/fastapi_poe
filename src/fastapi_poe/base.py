@@ -33,6 +33,7 @@ from fastapi_poe.templates import (
     URL_ATTACHMENT_TEMPLATE,
 )
 from fastapi_poe.types import (
+    Attachment,
     AttachmentUploadResponse,
     ContentType,
     CostItem,
@@ -420,7 +421,7 @@ class PoeBot:
                 stacklevel=2,
             )
 
-        attachment = await upload_file(
+        attachment = await self._upload_file(
             file=file_data,
             file_url=download_url,
             file_name=filename or download_filename,
@@ -444,6 +445,23 @@ class PoeBot:
             attachment_url=attachment.url,
             mime_type=attachment.content_type,
             inline_ref=inline_ref,
+        )
+
+    async def _upload_file(
+        self,
+        *,
+        file: Optional[Union[bytes, BinaryIO]],
+        file_url: Optional[str],
+        file_name: Optional[str],
+        api_key: str,
+        base_url: str,
+    ) -> Attachment:
+        return await upload_file(
+            file=file,
+            file_url=file_url,
+            file_name=file_name,
+            api_key=api_key,
+            base_url=base_url,
         )
 
     @deprecated(
