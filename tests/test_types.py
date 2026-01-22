@@ -20,6 +20,10 @@ class TestSettingsResponse:
         response = SettingsResponse()
         assert response.response_version == 2
 
+    def test_description(self) -> None:
+        response = SettingsResponse(description="My bot description")
+        assert response.description == "My bot description"
+
 
 def test_extra_attrs() -> None:
     with pytest.raises(pydantic.ValidationError):

@@ -565,6 +565,7 @@ Anthropic.
  messages if there is a multientity context.
 - `parameter_controls` (`Optional[ParameterControls] = None`): Optional JSON object that defines
 interactive parameter controls. The object must contain an api_version and sections array.
+- `description` (`str = ""`): A description of the bot.
 
 
 

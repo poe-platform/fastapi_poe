@@ -677,6 +677,7 @@ class SettingsResponse(BaseModel):
     messages if there is a multientity context.
     - `parameter_controls` (`Optional[ParameterControls] = None`): Optional JSON object that defines
     interactive parameter controls. The object must contain an api_version and sections array.
+    - `description` (`str = ""`): A description of the bot.
 
     """
 
@@ -697,6 +698,7 @@ class SettingsResponse(BaseModel):
     rate_card: Optional[str] = None
     cost_label: Optional[str] = None
     parameter_controls: Optional[ParameterControls] = None
+    description: Optional[str] = None
 
 
 class AttachmentUploadResponse(BaseModel):
