@@ -6,12 +6,10 @@ of features like attachments into the LLM request.
 """
 
 TEXT_ATTACHMENT_TEMPLATE = (
-    """Your response must be in the language of the relevant queries related to the document.\n"""
     """Below is the content of {attachment_name}:\n\n{attachment_parsed_content}"""
 )
 URL_ATTACHMENT_TEMPLATE = (
     """Assume you can access the external URL {attachment_name}. """
-    """Your response must be in the language of the relevant queries related to the URL.\n"""
     """Use the URL's content below to respond to the queries:\n\n{content}"""
 )
 IMAGE_VISION_ATTACHMENT_TEMPLATE = (
