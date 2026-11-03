@@ -1269,3 +1269,75 @@ async def test_upload_file_with_extra_headers() -> None:
     req: httpx.Request = send_mock.call_args.args[0]
     assert req.headers["Authorization"] == "secret-key"
     assert req.headers["X-Custom-Header"] == "custom-value"
+
+
+def _upload_ok_handler(request: httpx.Request) -> httpx.Response:
+    return httpx.Response(
+        200,
+        json={
+            "attachment_url": "https://cdn.example.com/fake-id/file.txt",
+            "mime_type": "text/plain",
+        },
+    )
+
+
+@pytest.mark.asyncio
+async def test_upload_file_leaves_caller_session_open() -> None:
+    session = httpx.AsyncClient(transport=httpx.MockTransport(_upload_ok_handler))
+    try:
+        attachment = await upload_file(
+            file_url="https://example.com/file.txt",
+            file_name="file.txt",
+            api_key="secret-key",
+            session=session,
+        )
+        assert attachment.url == "https://cdn.example.com/fake-id/file.txt"
+
+        # the caller owns the session, so it must still be usable afterwards
+        assert not session.is_closed
+        response = await session.get("https://example.com/again")
+        assert response.status_code == 200
+    finally:
+        await session.aclose()
+
+
+@pytest.mark.asyncio
+async def test_upload_file_closes_session_it_created() -> None:
+    real_client = httpx.AsyncClient
+    created: list[httpx.AsyncClient] = []
+
+    def make_client(timeout: float) -> httpx.AsyncClient:
+        client = real_client(
+            transport=httpx.MockTransport(_upload_ok_handler), timeout=timeout
+        )
+        created.append(client)
+        return client
+
+    with patch("httpx.AsyncClient", side_effect=make_client):
+        await upload_file(
+            file_url="https://example.com/file.txt",
+            file_name="file.txt",
+            api_key="secret-key",
+        )
+
+    assert len(created) == 1
+    assert created[0].is_closed
+
+
+@pytest.mark.asyncio
+async def test_upload_file_error_message_is_text() -> None:
+    async def fake_send(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(status_code=413, content=b'{"error":"file too large"}')
+
+    with (
+        patch("httpx.AsyncClient", return_value=_make_mock_async_client(fake_send)),
+        pytest.raises(AttachmentUploadError) as exc_info,
+    ):
+        await upload_file(
+            file_url="https://example.com/file.txt", api_key="secret-key", num_tries=1
+        )
+
+    message = str(exc_info.value)
+    assert message.startswith("413 ")
+    assert message.endswith(': {"error":"file too large"}')
+    assert "b'" not in message
