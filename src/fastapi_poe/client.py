@@ -413,7 +413,8 @@ async def stream_request(
     - tool_executables: (`Optional[list[Callable]] = None`): A list of functions corresponding
     to the ToolDefinitions. This is used for OpenAI function calling. When this is set, the
     LLM-suggested tools will automatically run once, before passing the results back to the LLM for
-    a final response.
+    a final response. If the LLM suggests a tool that is not in this list, a `BotError` is raised
+    and none of the suggested tools run.
 
     """
     if tools is not None:
@@ -457,6 +458,14 @@ async def _get_tool_results(
     tool_executables_dict = {
         executable.__name__: executable for executable in tool_executables
     }
+    # Check every requested tool before running any of them, so that an unknown tool
+    # name doesn't leave the earlier tool calls already executed.
+    for tool_call in tool_calls:
+        if tool_call.function.name not in tool_executables_dict:
+            raise BotError(
+                f"Bot called tool {tool_call.function.name!r}, which is not in "
+                f"tool_executables (available tools: {sorted(tool_executables_dict)})"
+            )
     tool_results = []
     for tool_call in tool_calls:
         tool_call_id = tool_call.id
