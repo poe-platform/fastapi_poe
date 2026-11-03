@@ -279,6 +279,36 @@ class TestStreamRequest:
         for message in return_values:
             yield message
 
+    async def mock_perform_query_request_for_tool_names(
+        self, tool_names: list[str]
+    ) -> AsyncGenerator[BotMessage, None]:
+        """Mock the OpenAI API response for a model that calls the given tools, in order."""
+        mock_deltas: list[dict[str, Any]] = [
+            {
+                "tool_calls": [
+                    {
+                        "index": index,
+                        "id": f"call_{index}",
+                        "type": "function",
+                        "function": {
+                            "name": tool_name,
+                            "arguments": '{"location":"Tokyo, JP"}',
+                        },
+                    }
+                ]
+            }
+            for index, tool_name in enumerate(tool_names)
+        ]
+        mock_deltas.append({})
+        mock_responses = [
+            self._create_mock_openai_response(delta) for delta in mock_deltas
+        ]
+        # last chunk has finish reason "tool_calls"
+        mock_responses[-1]["choices"][0]["finish_reason"] = "tool_calls"
+
+        for response in mock_responses:
+            yield BotMessage(text="", data=response)
+
     async def mock_perform_query_request_with_no_tools_selected(
         self,
     ) -> AsyncGenerator[BotMessage, None]:
@@ -558,6 +588,94 @@ class TestStreamRequest:
             concatenated_text += message.text
         assert concatenated_text == "there were no tool calls!"
         # we should not make a second request if no tools are selected
+        assert mock_perform_query_request_with_tools.call_count == 1
+
+    @patch("fastapi_poe.client._BotContext.perform_query_request")
+    async def test_stream_request_with_tools_and_tool_executables_known_tool(
+        self,
+        mock_perform_query_request_with_tools: Mock,
+        mock_request: QueryRequest,
+        tool_definitions_and_executables: tuple[list[ToolDefinition], list[Callable]],
+        mock_text_only_query_response: AsyncGenerator[BotMessage, None],
+    ) -> None:
+        """Control for the unknown tool name tests: a known tool runs as usual."""
+        mock_perform_query_request_with_tools.side_effect = [
+            self.mock_perform_query_request_for_tool_names(["get_current_weather"]),
+            mock_text_only_query_response,
+        ]
+        tools, _ = tool_definitions_and_executables
+        calls: list[str] = []
+
+        def get_current_weather(location: str) -> str:
+            calls.append(location)
+            return "sunny"
+
+        concatenated_text = ""
+        async for message in stream_request(
+            mock_request,
+            "test_bot",
+            tools=tools,
+            tool_executables=[get_current_weather],
+        ):
+            concatenated_text += message.text
+
+        assert concatenated_text == "Hello, world!"
+        assert calls == ["Tokyo, JP"]
+        assert mock_perform_query_request_with_tools.call_count == 2
+        assert mock_perform_query_request_with_tools.call_args_list[1].kwargs[
+            "tool_results"
+        ] == [
+            ToolResultDefinition(
+                role="tool",
+                name="get_current_weather",
+                tool_call_id="call_0",
+                content=json.dumps("sunny"),
+            )
+        ]
+
+    @pytest.mark.parametrize(
+        "tool_names",
+        [
+            ["does_not_exist"],
+            ["get_current_weather", "does_not_exist"],
+            ["does_not_exist", "get_current_weather"],
+        ],
+    )
+    @patch("fastapi_poe.client._BotContext.perform_query_request")
+    async def test_stream_request_with_tools_and_unknown_tool_name(
+        self,
+        mock_perform_query_request_with_tools: Mock,
+        mock_request: QueryRequest,
+        tool_definitions_and_executables: tuple[list[ToolDefinition], list[Callable]],
+        tool_names: list[str],
+    ) -> None:
+        """The model calls a tool that is not in tool_executables."""
+        mock_perform_query_request_with_tools.side_effect = [
+            self.mock_perform_query_request_for_tool_names(tool_names)
+        ]
+        tools, _ = tool_definitions_and_executables
+        calls: list[str] = []
+
+        def get_current_weather(location: str) -> str:
+            calls.append(location)
+            return "sunny"
+
+        with pytest.raises(BotError) as exc_info:
+            async for _ in stream_request(
+                mock_request,
+                "test_bot",
+                tools=tools,
+                tool_executables=[get_current_weather],
+            ):
+                pass
+
+        assert str(exc_info.value) == (
+            "Bot called tool 'does_not_exist', which is not in tool_executables "
+            "(available tools: ['get_current_weather'])"
+        )
+        # No tool runs when any of the requested tools is unknown, and the bot is not
+        # queried again with tool results.
+        assert calls == []
         assert mock_perform_query_request_with_tools.call_count == 1
 
     @patch("fastapi_poe.client._BotContext.perform_query_request")
