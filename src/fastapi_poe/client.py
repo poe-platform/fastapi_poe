@@ -980,10 +980,8 @@ async def upload_file(
 
         if response.status_code != 200:
             # collect full error text (endpoint streams errors)
-            try:
-                err_txt = await response.aread()
-            except Exception:
-                err_txt = response.text
+            await response.aread()
+            err_txt = response.text
             raise AttachmentUploadError(
                 f"{response.status_code} {response.reason_phrase}: {err_txt}"
             )
@@ -999,11 +997,12 @@ async def upload_file(
         )
 
     # retry wrapper
-    _sess = session or httpx.AsyncClient(timeout=120)
-    async with _sess:
+    async with contextlib.AsyncExitStack() as stack:
+        if session is None:
+            session = await stack.enter_async_context(httpx.AsyncClient(timeout=120))
         for attempt in range(num_tries):
             try:
-                return await _do_upload(_sess)
+                return await _do_upload(session)
             except Exception as e:
                 on_error(e, f"upload attempt {attempt+1}/{num_tries} failed")
                 if attempt == num_tries - 1:
